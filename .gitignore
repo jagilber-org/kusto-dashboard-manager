@@ -1,0 +1,73 @@
+# PowerShell
+*.ps1xml
+*.psd1~
+*.psm1~
+
+# Build artifacts
+bin/
+obj/
+out/
+dist/
+
+# Test results
+TestResults/
+*.trx
+coverage/
+
+# Local configuration
+*.local.json
+*.local.config
+appsettings.local.json
+
+# Secrets and credentials
+secrets/
+*.secrets
+*.key
+*.pfx
+*.p12
+.env
+.env.local
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Playwright
+playwright-report/
+test-results/
+.playwright-cache/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Dashboard exports (unless explicitly committed)
+exports/*.json
+!exports/example-dashboard.json
+
+# Node modules (if using Playwright via npm)
+node_modules/
+
+# Python (if using MCP servers)
+__pycache__/
+*.py[cod]
+venv/
+.venv/

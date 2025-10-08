@@ -1,0 +1,39 @@
+{
+  "application": {
+    "name": "KustoDashboardManager",
+    "version": "1.0.0",
+    "logLevel": "Info"
+  },
+  "browser": {
+    "type": "msedge",
+    "headless": false,
+    "timeout": 30000,
+    "workProfile": "Default",
+    "launchArgs": []
+  },
+  "kusto": {
+    "baseUrl": "https://dataexplorer.azure.com",
+    "dashboardsPath": "/dashboards",
+    "timeout": 60000
+  },
+  "export": {
+    "outputPath": "./exports",
+    "filenamePattern": "{id}_{timestamp}.json",
+    "includeMetadata": true,
+    "prettyPrint": true,
+    "createManifest": true
+  },
+  "import": {
+    "validateSchema": true,
+    "conflictResolution": "prompt",
+    "backupExisting": true
+  },
+  "logging": {
+    "level": "Info",
+    "format": "json",
+    "outputPath": "./logs",
+    "filename": "dashboard-manager_{date}.log",
+    "maxFileSizeMB": 10,
+    "maxFiles": 30
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "browser": {
+    "headless": true,
+    "timeout": 60000
+  },
+  "logging": {
+    "level": "Warning",
+    "outputPath": "C:\\ProgramData\\KustoDashboardManager\\logs"
+  },
+  "export": {
+    "outputPath": "C:\\ProgramData\\KustoDashboardManager\\exports"
+  }
+}

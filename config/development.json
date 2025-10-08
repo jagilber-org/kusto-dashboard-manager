@@ -1,0 +1,11 @@
+{
+  "browser": {
+    "headless": false
+  },
+  "logging": {
+    "level": "Debug"
+  },
+  "export": {
+    "outputPath": "./exports-dev"
+  }
+}
