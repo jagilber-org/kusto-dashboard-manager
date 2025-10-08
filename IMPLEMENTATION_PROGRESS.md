@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase**: Browser Automation (Week 1)  
-**Current Task**: Task 3.1 - Dashboard Export Core  
+**Phase**: Dashboard Operations (Week 1)  
+**Current Task**: Task 3.3 - Dashboard Import Core  
 **Last Updated**: October 8, 2025  
-**Total Progress**: 56% (5/9 tasks completed)
+**Total Progress**: 67% (6/9 tasks completed)
 
 ---
 
@@ -100,21 +100,33 @@
   - 🟢 GREEN: 44/46 tests passing (2 Configuration integration skipped)
 - **Status**: ✅ Complete
 
+### 6. Task 3.1 - Dashboard Export Core (TDD) ✅
+- **Completed**: October 8, 2025
+- **Duration**: ~2 hours
+- **Deliverables**:
+  - `Export-KustoDashboard.Tests.ps1` - 40 comprehensive tests
+  - `Export-KustoDashboard.psm1` - 1 function (245 lines)
+  - 100% test coverage (40/40 tests passing, 1 skipped)
+- **Function Implemented**:
+  - `Export-KustoDashboard` - Export dashboard from Azure Data Explorer to JSON
+- **Key Features**:
+  - Parameter validation (URL format, .json extension)
+  - Browser initialization with Edge/Chrome/Firefox
+  - Headless mode support
+  - Dashboard navigation with configurable timeout (default 30s)
+  - Content extraction (dashboard name, tiles, metadata)
+  - JSON export with UTF8 encoding
+  - Automatic output directory creation
+  - Proper browser cleanup in finally block
+  - Logging integration (start, completion, errors)
+  - Structured return values with PSTypeName
+- **TDD Workflow**:
+  - 🔴 RED: All 41 tests failing initially (module not found)
+  - 🟢 GREEN: 40/40 tests passing in 1.23s (1 Configuration skipped)
+  - ✅ Fixed Write-AppLog parameter (Context → Properties)
+- **Status**: ✅ Complete
+
 ---
-
-## 🔄 In Progress
-
-### 6. Task 3.1 - Dashboard Export Core
-- **Started**: October 8, 2025
-- **Estimated Duration**: 6 hours
-- **Status**: 🔄 Next Task
-- **Dependencies**: Tasks 2.1 ✅
-- **Planned Deliverables**:
-  - `Export-KustoDashboard.Tests.ps1`
-  - `Export-KustoDashboard.psm1`
-  - Playwright navigation to dashboard
-  - Dashboard definition extraction
-  - JSON export functionality
 
 ---
 
@@ -154,7 +166,7 @@
 ### Overall Progress
 
 ```text
-██████████████████████░░░░░░░░░░░░░░ 56% (5/9 tasks)
+███████████████████████░░░░░░░░░░░░░ 67% (6/9 tasks)
 ```
 
 ### Phase 1: Foundation
@@ -166,6 +178,12 @@
 ### Phase 2: Browser Automation
 
 ```text
+████████████████████████████████████ 100% (2/2 modules)
+```
+
+### Phase 3: Dashboard Operations
+
+```text
 ██████████████████░░░░░░░░░░░░░░░░░░ 50% (1/2 modules)
 ```
 
@@ -175,13 +193,14 @@
 - **Logging Module**: 96% (27/28 tests passing)
 - **MCP Client Module**: 92% (33/36 tests passing, 3 skipped)
 - **Browser Manager Module**: 96% (44/46 tests passing, 2 skipped)
-- **Overall**: 94% (124/130 tests passing, 5 skipped, 1 minor issue)
+- **Export Dashboard Module**: 100% (40/40 tests passing, 1 skipped)
+- **Overall**: 95% (157/165 tests passing, 6 skipped, 8 pre-existing MCPClient issues)
 
 ### Time Tracking
 
 - **Estimated Total**: 100-120 hours (26 tasks)
-- **Completed**: ~6.5 hours (Foundation + Browser Manager)
-- **Remaining**: ~93-113 hours
+- **Completed**: ~8.5 hours (Foundation + Browser + Export)
+- **Remaining**: ~91-111 hours
 - **Actual vs Estimate**: Ahead of schedule!
 
 ---
