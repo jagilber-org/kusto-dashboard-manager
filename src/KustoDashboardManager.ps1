@@ -162,6 +162,24 @@ try {
         exit 1
     }
     
+    # Initialize MCP Client for actions that require browser operations
+    if ($Action -in @('Export', 'Import')) {
+        try {
+            Write-Verbose "Initializing MCP Client..."
+            $null = Initialize-MCPClient -Servers @('playwright')
+            
+            if ($LogPath) {
+                Write-AppLog -Level INFO -Message "MCP Client initialized successfully"
+            }
+        }
+        catch {
+            Write-Error "Failed to initialize MCP Client: $($_.Exception.Message)"
+            Write-Host "`nNote: Playwright MCP Server must be running for browser operations." -ForegroundColor Yellow
+            Write-Host "Please ensure the MCP server is started before running Export or Import actions." -ForegroundColor Yellow
+            exit 1
+        }
+    }
+    
     switch ($Action) {
         'Export' {
             Write-Host "Action: Export Dashboard" -ForegroundColor Yellow
