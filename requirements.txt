@@ -6,5 +6,11 @@ pytest-asyncio>=0.23.0
 pytest-cov>=7.0.0
 pytest-mock>=3.15.0
 
+# Environment configuration
+python-dotenv>=1.0.0  # For loading .env files
+
+# MCP Server dependencies
+pyyaml>=6.0.0  # For parsing Playwright snapshots
+
 # Note: The Playwright MCP server is installed via Node.js
 # Install with: npx @playwright/mcp@latest

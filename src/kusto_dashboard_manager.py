@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import Config, get_config, set_config
 from utils import get_logger, set_logger, Logger, validate_json_file, print_success, print_error, print_info, print_header
-from playwright_mcp_client import WorkingPyMCPClient as PlaywrightMCPClient
+from playwright_mcp_client import PlaywrightMCPClient
 from dashboard_export import DashboardExporter
 from dashboard_import import DashboardImporter
 

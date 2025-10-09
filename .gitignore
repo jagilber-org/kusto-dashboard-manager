@@ -63,6 +63,16 @@ temp/
 exports/*.json
 !exports/example-dashboard.json
 
+# Dashboard snapshots (contain PII - creator names, dashboard names, etc.)
+docs/snapshots/*.yaml
+docs/snapshots/*.json
+!docs/snapshots/README.md
+
+# Traces (may contain session data and PII)
+traces/**
+!traces/.gitkeep
+!traces/README.md
+
 # Node modules (if using Playwright via npm)
 node_modules/
 
