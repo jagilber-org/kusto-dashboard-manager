@@ -1,0 +1,18 @@
+# Development Dependencies
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=7.0.0
+pytest-mock>=3.15.0
+pytest-xdist>=3.0.0  # Parallel test execution
+
+# Code Quality
+black>=24.0.0  # Code formatter
+flake8>=7.0.0  # Linter
+mypy>=1.8.0  # Type checker
+isort>=5.13.0  # Import sorter
+
+# Documentation
+sphinx>=7.0.0  # Documentation generator
+sphinx-rtd-theme>=2.0.0  # ReadTheDocs theme
