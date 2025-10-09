@@ -1,0 +1,18 @@
+{
+  "DashboardName": "Test Dashboard",
+  "Description": "A test dashboard for validation",
+  "Tiles": [
+    {
+      "TileName": "Query Results",
+      "Query": ".show databases",
+      "VisualizationType": "table"
+    },
+    {
+      "TileName": "Performance Chart",
+      "Query": "PerformanceCounters | take 10",
+      "VisualizationType": "linechart"
+    }
+  ],
+  "Parameters": [],
+  "Tags": ["test", "sample"]
+}
