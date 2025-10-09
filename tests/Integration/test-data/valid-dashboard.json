@@ -1,0 +1,11 @@
+{
+  "DashboardName": "Smoke Test Dashboard",
+  "Description": "Test dashboard",
+  "Tiles": [
+    {
+      "TileName": "Test",
+      "Query": ".show databases",
+      "VisualizationType": "table"
+    }
+  ]
+}
