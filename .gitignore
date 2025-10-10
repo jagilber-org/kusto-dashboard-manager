@@ -75,6 +75,7 @@ traces/**
 
 # Node modules (if using Playwright via npm)
 node_modules/
+package-lock.json
 
 # Python (if using MCP servers)
 __pycache__/
@@ -83,3 +84,22 @@ venv/
 .venv/
 .env
 .env.local
+
+# Test and debug files
+debug_*.py
+test_*.py
+!client/test_mcp_client.py
+!client/test-js-*.js
+main.py
+query_*.py
+export_all*.py
+*_standalone.py
+
+# Temporary data files
+*-dashboards.json
+dashboard_list_*.json
+sample_*.yaml
+
+# Failed experiments / archived code
+*_passthrough*.py
+*_protocol_client.py

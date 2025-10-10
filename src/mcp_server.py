@@ -17,6 +17,7 @@ from dashboard_import import DashboardImporter
 from playwright_mcp_client import PlaywrightMCPClient
 from config import Config
 from utils import get_logger, validate_dashboard_url
+from tracer import trace_func_entry, trace_func_exit, trace_info, trace_error
 
 class KustoDashboardMCPServer:
     """MCP Server for Kusto Dashboard Management"""
@@ -24,8 +25,8 @@ class KustoDashboardMCPServer:
     def __init__(self):
         self.logger = get_logger()
         self.config = Config()
-        self.mcp_client = PlaywrightMCPClient()
         self.request_id = 0
+        self.client_request_id = 1000  # For requests back to client
         
     def _next_id(self) -> int:
         """Generate next request ID"""
@@ -49,23 +50,16 @@ class KustoDashboardMCPServer:
         return error
     
     async def _export_dashboard(self, url: str, output_path: str = None) -> Dict:
-        """Export a single dashboard"""
-        try:
-            exporter = DashboardExporter(self.mcp_client, self.config.data)
-            path = await exporter.export_dashboard(url, output_path)
-            return {
-                "success": True,
-                "outputPath": path,
-                "url": url
-            }
-        except Exception as e:
-            self.logger.error(f"Export failed: {e}")
-            raise
+        """Export a single dashboard - REQUIRES USER TO CALL PLAYWRIGHT MCP FIRST"""
+        raise NotImplementedError(
+            "Use parse_dashboards_from_snapshot instead. "
+            "Call @playwright to navigate and snapshot, then pass result to this tool."
+        )
     
     async def _import_dashboard(self, url: str, json_path: str, force: bool = False) -> Dict:
         """Import a dashboard from JSON"""
         try:
-            importer = DashboardImporter(self.mcp_client, self.config.data)
+            importer = DashboardImporter(self.mcp_client, self.config)
             result = await importer.import_dashboard(url, json_path, force)
             return {
                 "success": True,
@@ -110,29 +104,63 @@ class KustoDashboardMCPServer:
                 "errors": [str(e)]
             }
     
-    async def _export_all_dashboards(self, list_url: str = "https://dataexplorer.azure.com/dashboards") -> Dict:
-        """Export all dashboards created by current user"""
+    async def _export_all_dashboards(self, snapshot_yaml: str, creator_filter: str = None) -> Dict:
+        """Export all dashboards from a Playwright snapshot"""
+        # Just call parse - same thing
+        return await self._parse_dashboards_from_snapshot(snapshot_yaml, creator_filter)
+    
+    async def _parse_dashboards_from_snapshot(self, snapshot_yaml: str, creator_filter: str = None) -> Dict:
+        """Parse dashboard list from Playwright snapshot YAML - NO BROWSER ACCESS NEEDED"""
+        trace_func_entry("_parse_dashboards_from_snapshot", creator_filter=creator_filter, yaml_length=len(snapshot_yaml))
         try:
-            # TODO: Implement dashboard list parsing
-            # This will use Playwright MCP to:
-            # 1. Navigate to dashboards page
-            # 2. Take accessibility snapshot
-            # 3. Parse snapshot for dashboard links
-            # 4. Filter by creator (current user)
-            # 5. Export each dashboard
+            from dashboard_export import DashboardExporter
+            # Pass None as mcp_client since we don't need browser access
+            exporter = DashboardExporter(None, self.config)
             
-            self.logger.info("Bulk export not yet implemented")
-            return {
-                "success": False,
-                "error": "Bulk export functionality coming soon"
+            dashboards = []
+            exporter._parse_raw_snapshot_text(snapshot_yaml, dashboards)
+            
+            trace_info(f"Parsed {len(dashboards)} dashboards from snapshot")
+            
+            # Filter by creator
+            if creator_filter:
+                original_count = len(dashboards)
+                dashboards = [d for d in dashboards if creator_filter.lower() in d.get("creator", "").lower()]
+                trace_info(f"Filtered to {len(dashboards)} dashboards by creator: {creator_filter}")
+            
+            result = {
+                "success": True,
+                "total_found": len(dashboards),
+                "dashboards": dashboards
             }
+            trace_func_exit("_parse_dashboards_from_snapshot", result=f"{len(dashboards)} dashboards")
+            return result
         except Exception as e:
-            self.logger.error(f"Bulk export failed: {e}")
+            trace_func_exit("_parse_dashboards_from_snapshot", error=str(e))
+            self.logger.error(f"Parsing failed: {e}")
             raise
     
     def _get_tool_definitions(self) -> List[Dict]:
         """Return MCP tool definitions"""
         return [
+            {
+                "name": "parse_dashboards_from_snapshot",
+                "description": "Parse dashboard list from Playwright browser snapshot YAML. Use mcp_playwright_browser_navigate to go to https://dataexplorer.azure.com/dashboards, wait 8 seconds, call mcp_playwright_browser_snapshot, then pass the 'raw' field to this tool.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "snapshot_yaml": {
+                            "type": "string",
+                            "description": "The 'raw' field from mcp_playwright_browser_snapshot result"
+                        },
+                        "creatorFilter": {
+                            "type": "string",
+                            "description": "Optional creator name to filter dashboards (e.g., 'Jason Gilbertson')"
+                        }
+                    },
+                    "required": ["snapshot_yaml"]
+                }
+            },
             {
                 "name": "export_dashboard",
                 "description": "Export an Azure Data Explorer dashboard to JSON",
@@ -190,26 +218,33 @@ class KustoDashboardMCPServer:
             },
             {
                 "name": "export_all_dashboards",
-                "description": "Export all dashboards created by current user (bulk export)",
+                "description": "Export all dashboards from Playwright snapshot. Copilot should: 1) Call @playwright navigate to https://dataexplorer.azure.com/dashboards, 2) Wait 8 seconds, 3) Call @playwright snapshot, 4) Pass the 'raw' field to this tool",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "listUrl": {
+                        "snapshot_yaml": {
                             "type": "string",
-                            "description": "Dashboards list URL",
-                            "default": "https://dataexplorer.azure.com/dashboards"
+                            "description": "The 'raw' field from @playwright browser snapshot"
+                        },
+                        "creatorFilter": {
+                            "type": "string",
+                            "description": "Filter dashboards by creator name (e.g., 'Jason Gilbertson')"
                         }
-                    }
+                    },
+                    "required": ["snapshot_yaml"]
                 }
             }
         ]
     
     async def handle_request(self, request: Dict) -> Dict:
         """Handle incoming JSON-RPC request"""
+        trace_info("MCP Server received request", method=request.get("method"))
         try:
             method = request.get("method")
             params = request.get("params", {})
             req_id = request.get("id")
+            
+            trace_info("Processing request", method=method, req_id=req_id)
             
             if method == "initialize":
                 return self._create_response(req_id, {
@@ -232,7 +267,14 @@ class KustoDashboardMCPServer:
                 tool_name = params.get("name")
                 arguments = params.get("arguments", {})
                 
-                if tool_name == "export_dashboard":
+                trace_info("Calling tool", tool_name=tool_name, arguments=str(arguments)[:200])
+                
+                if tool_name == "parse_dashboards_from_snapshot":
+                    result = await self._parse_dashboards_from_snapshot(
+                        arguments["snapshot_yaml"],
+                        arguments.get("creatorFilter")
+                    )
+                elif tool_name == "export_dashboard":
                     result = await self._export_dashboard(
                         arguments["url"],
                         arguments.get("outputPath")
@@ -248,14 +290,19 @@ class KustoDashboardMCPServer:
                         arguments["jsonPath"]
                     )
                 elif tool_name == "export_all_dashboards":
+                    trace_info("Starting export_all_dashboards")
                     result = await self._export_all_dashboards(
-                        arguments.get("listUrl", "https://dataexplorer.azure.com/dashboards")
+                        arguments["snapshot_yaml"],
+                        arguments.get("creatorFilter")
                     )
+                    trace_info("export_all_dashboards completed", found=result.get("total_found"))
                 else:
+                    trace_error("Unknown tool", tool_name=tool_name)
                     return self._create_response(req_id, error=self._create_error(
                         -32601, f"Unknown tool: {tool_name}"
                     ))
                 
+                trace_info("Returning tool result", tool_name=tool_name)
                 return self._create_response(req_id, {
                     "content": [
                         {
@@ -279,16 +326,21 @@ class KustoDashboardMCPServer:
     
     async def run(self):
         """Run the MCP server (stdio transport)"""
+        trace_info("Kusto Dashboard Manager MCP Server starting")
         self.logger.info("Kusto Dashboard Manager MCP Server starting")
         
         try:
             while True:
                 # Read JSON-RPC message from stdin
+                trace_info("Waiting for stdin input")
                 line = await asyncio.get_event_loop().run_in_executor(
                     None, sys.stdin.readline
                 )
                 
+                trace_info("Received stdin line", length=len(line) if line else 0)
+                
                 if not line:
+                    trace_info("EOF received, shutting down")
                     break
                 
                 try:

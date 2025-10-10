@@ -1,6 +1,7 @@
 """Configuration Module"""
 import json
 import os
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 class Config:
@@ -12,11 +13,59 @@ class Config:
             "selectors": {"dashboard_canvas": ".dashboard-canvas"}
         },
         "logging": {"enabled": False, "level": "INFO"},
+        "tracing": {"enabled": False, "file_logging": True, "level": "DEBUG", "log_dir": "logs"},
         "exports_directory": "exports"
     }
     
     def __init__(self, config=None):
         self.config = self._merge_configs(self.DEFAULT_CONFIG.copy(), config or {})
+        self.data = self._load_env_file()
+        self._init_tracing()
+    
+    def _load_env_file(self):
+        """Load environment variables from .env file"""
+        env_data = {}
+        env_file = Path(__file__).parent.parent / ".env"
+        if env_file.exists():
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        env_data[key.strip()] = value.strip()
+        return env_data
+    
+    def _init_tracing(self):
+        """Initialize tracing based on config or env variables"""
+        import logging
+        import sys
+        from tracer import enable_tracing
+        
+        # Debug output to stderr
+        print(f"[DEBUG] _init_tracing called", file=sys.stderr)
+        print(f"[DEBUG] self.data keys: {list(self.data.keys())}", file=sys.stderr)
+        
+        # Check env vars first, then config
+        trace_enabled = self.data.get('TRACE_ENABLED', '').lower() in ('true', '1', 'yes') or \
+                        self.get('tracing.enabled', False)
+        
+        print(f"[DEBUG] trace_enabled: {trace_enabled}", file=sys.stderr)
+        
+        if trace_enabled:
+            level_str = self.data.get('TRACE_LEVEL') or self.get('tracing.level', 'DEBUG')
+            level = getattr(logging, level_str.upper(), logging.DEBUG)
+            
+            file_logging_str = self.data.get('TRACE_FILE_LOGGING', '')
+            if file_logging_str:
+                file_logging = file_logging_str.lower() in ('true', '1', 'yes')
+            else:
+                file_logging = self.get('tracing.file_logging', True)
+            
+            log_dir = self.data.get('TRACE_LOG_DIR') or self.get('tracing.log_dir', 'logs')
+            
+            print(f"[DEBUG] Enabling tracing: file_logging={file_logging}, level={level_str}, log_dir={log_dir}", file=sys.stderr)
+            enable_tracing(file_logging=file_logging, level=level, log_dir=log_dir)
+            print(f"[DEBUG] Tracing enabled successfully", file=sys.stderr)
     
     def _merge_configs(self, base, override):
         result = base.copy()

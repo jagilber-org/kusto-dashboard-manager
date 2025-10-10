@@ -9,7 +9,12 @@ class PlaywrightMCPClient:
         self.stdout = None
         self.request_id = 1
         self.connected = False
-        self.server_command = ["npx", "@playwright/mcp@latest"]
+        # On Windows, use cmd.exe to run npx
+        import platform
+        if platform.system() == "Windows":
+            self.server_command = ["cmd", "/c", "npx", "@playwright/mcp@latest"]
+        else:
+            self.server_command = ["npx", "@playwright/mcp@latest"]
         self.verbose = True
     
     async def _read_message(self, timeout=10.0):
@@ -30,12 +35,12 @@ class PlaywrightMCPClient:
                 print(f"   → {payload.get('method', 'unknown')}")
         except Exception as e:
             if self.verbose:
-                print(f"❌ Send failed: {e}")
+                print(f"[!] Send failed: {e}")
             return None
         response = await self._read_message(timeout=15.0)
         if response and self.verbose:
             if 'result' in response:
-                print(f"   ✅ Response received")
+                print(f"   [+] Response received")
         return response
     
     async def connect(self):
@@ -43,7 +48,7 @@ class PlaywrightMCPClient:
             return True
         try:
             if self.verbose:
-                print("🔗 Starting Playwright MCP...")
+                print("[*] Starting Playwright MCP...")
             self.proc = await asyncio.create_subprocess_exec(
                 *self.server_command,
                 stdin=asyncio.subprocess.PIPE,
@@ -53,6 +58,12 @@ class PlaywrightMCPClient:
             self.stdin = self.proc.stdin
             self.stdout = self.proc.stdout
             self.stderr = self.proc.stderr
+            
+            if not self.stdin or not self.stdout:
+                raise Exception("Failed to create subprocess pipes")
+            
+            # Give the process a moment to start
+            await asyncio.sleep(0.5)
             
             init_req = {
                 "jsonrpc": "2.0",
@@ -69,7 +80,7 @@ class PlaywrightMCPClient:
             if resp and 'result' in resp:
                 if self.verbose:
                     info = resp['result'].get('serverInfo', {})
-                    print(f"✅ Connected to {info.get('name', 'MCP')} v{info.get('version', '?')}")
+                    print(f"[+] Connected to {info.get('name', 'MCP')} v{info.get('version', '?')}")
                 self.connected = True
                 notif = {"jsonrpc": "2.0", "method": "notifications/initialized"}
                 self.stdin.write((json.dumps(notif) + '\n').encode('utf-8'))
@@ -78,18 +89,25 @@ class PlaywrightMCPClient:
             return False
         except Exception as e:
             if self.verbose:
-                print(f"❌ Error: {e}")
+                print(f"[!] Error: {e}")
             return False
     
     async def disconnect(self):
         if self.proc:
             try:
+                if self.stdin:
+                    self.stdin.close()
+                    await self.stdin.wait_closed()
                 self.proc.terminate()
                 await asyncio.wait_for(self.proc.wait(), timeout=2.0)
             except:
-                self.proc.kill()
+                if self.proc:
+                    self.proc.kill()
             finally:
                 self.proc = None
+                self.stdin = None
+                self.stdout = None
+                self.stderr = None
                 self.connected = False
     
     async def list_tools(self):

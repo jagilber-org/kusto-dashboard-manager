@@ -1,0 +1,25 @@
+{
+  "name": "kusto-dashboard-manager-client",
+  "version": "1.0.0",
+  "description": "Test clients for kusto-dashboard-manager MCP server",
+  "type": "module",
+  "main": "test-js-kusto.js",
+  "scripts": {
+    "test:kusto": "node test-js-kusto.js",
+    "test:playwright": "node test-js-playwright.js",
+    "test:kusto:debug": "node test-js-kusto.js --debug",
+    "test:playwright:debug": "node test-js-playwright.js --debug"
+  },
+  "keywords": [
+    "mcp",
+    "kusto",
+    "azure",
+    "dashboard",
+    "playwright"
+  ],
+  "author": "Jason Gilbertson",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0"
+  }
+}

@@ -1,0 +1,3 @@
+mcp==1.13.1
+# Future upgrade target (uncomment when validated):
+# mcp==<next_release_with_high_level_client>
