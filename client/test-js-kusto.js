@@ -38,15 +38,15 @@ class KustoMCPTest {
   async connect() {
     try {
       this.log('🔌', 'Connecting to kusto-dashboard-manager MCP server...');
-      
+
       const isWindows = process.platform === 'win32';
       const pythonCmd = 'python';
       const args = ['-m', 'src.mcp_server'];
       const cwd = join(__dirname, '..');
-      
+
       this.log('🚀', `Spawning: ${pythonCmd} ${args.join(' ')}`);
       this.log('📁', `Working directory: ${cwd}`);
-      
+
       this.debugLog('Creating StdioClientTransport...');
       this.transport = new StdioClientTransport({
         command: pythonCmd,
@@ -65,7 +65,7 @@ class KustoMCPTest {
       this.debugLog('Connecting client to transport...');
       await this.client.connect(this.transport);
       this.debugLog('Connected successfully');
-      
+
       this.log('✅', 'Connected to kusto-dashboard-manager MCP server');
       this.results.passed.push('Connection');
       return true;
@@ -82,9 +82,9 @@ class KustoMCPTest {
   async listTools() {
     try {
       this.log('📋', 'Listing available tools...');
-      
+
       const response = await this.client.listTools();
-      
+
       this.log('✅', `Found ${response.tools.length} tools:`);
       response.tools.forEach((tool, index) => {
         console.log(`  ${index + 1}. ${tool.name}`);
@@ -108,13 +108,13 @@ class KustoMCPTest {
   async testParseDashboards() {
     try {
       this.log('🔍', 'Testing parse_dashboards_from_snapshot...');
-      
+
       const sampleYaml = `
         - row "Test Dashboard about 1 hour ago 10/10/2025 Jason Gilbertson" [ref=
           - /url: /dashboards/12345678-1234-1234-1234-123456789abc
           - rowheader "Test Dashboard"
       `;
-      
+
       const response = await this.client.callTool({
         name: 'parse_dashboards_from_snapshot',
         arguments: {
@@ -126,9 +126,9 @@ class KustoMCPTest {
       if (response.content && response.content.length > 0) {
         const resultText = response.content[0].text;
         const result = JSON.parse(resultText);
-        
+
         this.debugLog(`Parse result: ${JSON.stringify(result, null, 2)}`);
-        
+
         if (result.success) {
           if (result.dashboards && result.dashboards.length > 0) {
             this.log('✅', `Parse successful: found ${result.dashboards.length} dashboard(s)`);
@@ -167,10 +167,10 @@ class KustoMCPTest {
     console.log('\n' + '='.repeat(60));
     console.log('📊 TEST SUMMARY - JavaScript Client vs Kusto MCP');
     console.log('='.repeat(60));
-    
+
     console.log(`\n✅ PASSED (${this.results.passed.length}):`);
     this.results.passed.forEach(test => console.log(`   - ${test}`));
-    
+
     if (this.results.failed.length > 0) {
       console.log(`\n❌ FAILED (${this.results.failed.length}):`);
       this.results.failed.forEach(({ test, error }) => {
@@ -178,13 +178,13 @@ class KustoMCPTest {
         console.log(`     Error: ${error}`);
       });
     }
-    
+
     const total = this.results.passed.length + this.results.failed.length;
     const passRate = total > 0 ? ((this.results.passed.length / total) * 100).toFixed(1) : 0;
-    
+
     console.log(`\n📈 Pass Rate: ${passRate}% (${this.results.passed.length}/${total})`);
     console.log('='.repeat(60) + '\n');
-    
+
     return this.results.failed.length === 0;
   }
 

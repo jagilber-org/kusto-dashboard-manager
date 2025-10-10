@@ -37,8 +37,8 @@ See **[CLIENT_TESTING.md](./CLIENT_TESTING.md)** for:
 
 ## Working Test Clients
 
-✅ **test-js-kusto.js** - JavaScript client for kusto-dashboard-manager  
-✅ **test-js-playwright.js** - JavaScript client for Playwright MCP  
+✅ **test-js-kusto.js** - JavaScript client for kusto-dashboard-manager
+✅ **test-js-playwright.js** - JavaScript client for Playwright MCP
 ✅ **test_mcp_client.py** - Python client for kusto-dashboard-manager
 
 ## SDK Reference Files (python-mcp-client-sdk-20251010-092718/)

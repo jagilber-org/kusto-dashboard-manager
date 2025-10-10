@@ -1,30 +1,31 @@
 # Kusto Dashboard Manager
 
-A Python command-line tool for exporting and importing Azure Data Explorer (Kusto) dashboards using browser automation via the Model Context Protocol (MCP).
+An MCP (Model Context Protocol) server for exporting and importing Azure Data Explorer (Kusto) dashboards via VS Code and GitHub Copilot integration with Playwright browser automation.
 
-[![Tests](https://img.shields.io/badge/tests-130%20passing-brightgreen)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-94--100%25-brightgreen)](tests/)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![MCP](https://img.shields.io/badge/MCP-1.0-blue)](https://modelcontextprotocol.io/)
+[![Node.js](https://img.shields.io/badge/node.js-22.20.0%2B-green)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen)](client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Features
 
-- **Export Dashboards**: Export Azure Data Explorer dashboards to JSON files with metadata
+- **VS Code Integration**: Works seamlessly with GitHub Copilot via MCP protocol
+- **Export Dashboards**: Export Azure Data Explorer dashboards to JSON files with bulk export support
 - **Import Dashboards**: Import dashboard JSON files back into Azure Data Explorer
 - **Validate**: Validate dashboard JSON file structure before import
-- **Browser Automation**: Uses Playwright MCP server for reliable browser automation
-- **Configuration Management**: Flexible configuration via environment variables or JSON files
-- **Comprehensive Testing**: 130 tests with 94-100% coverage across all modules
+- **Parse Dashboards**: Extract dashboard list from Playwright browser snapshots with creator filtering
+- **Browser Automation**: Integrates with Playwright MCP server for reliable browser automation
+- **100% Test Coverage**: Comprehensive test suite with JavaScript and Python clients
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Development](#development)
+- [MCP Tools](#mcp-tools)
 - [Testing](#testing)
 - [Architecture](#architecture)
+- [Development](#development)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -33,538 +34,694 @@ A Python command-line tool for exporting and importing Azure Data Explorer (Kust
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Node.js (for Playwright MCP server)
+- **Python 3.12** or higher
+- **Node.js 22.20.0** or higher
+- **VS Code** with GitHub Copilot extension
+- **Playwright MCP server** (`@playwright/mcp@latest`)
 - Azure Data Explorer account with dashboard access
 
-### Setup
+### Setup in VS Code
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/jagilber/kusto-dashboard-manager.git
    cd kusto-dashboard-manager
    ```
 
 2. **Install Python dependencies**:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Install Playwright MCP server** (one-time setup):
+3. **Install Playwright MCP server** (if not already installed):
+
    ```bash
    npx @playwright/mcp@latest
    ```
 
-4. **Verify installation**:
-   ```bash
-   python src/kusto_dashboard_manager.py version
+4. **Configure VS Code MCP settings** (`.vscode/settings.json`):
+
+   ```json
+   {
+     "github.copilot.chat.mcp.enabled": true,
+     "github.copilot.chat.mcp.servers": {
+       "playwright": {
+         "command": "npx",
+         "args": ["@playwright/mcp@latest"]
+       },
+       "kusto-dashboard-manager": {
+         "command": "python",
+         "args": ["-u", "src/mcp_server.py"]
+       }
+     }
+   }
    ```
+
+5. **Reload VS Code window**:
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+   - Type "Developer: Reload Window"
+   - Press Enter
+
+6. **Verify MCP servers are running**:
+   - Open GitHub Copilot Chat
+   - Type `@workspace` and you should see tools from both servers
 
 ## Quick Start
 
-### Export a Dashboard
+### Using GitHub Copilot Chat (Recommended)
 
-```bash
-python src/kusto_dashboard_manager.py export \
-  "https://dataexplorer.azure.com/dashboards/12345" \
-  -o my_dashboard.json
-```
-
-### Validate Dashboard JSON
-
-```bash
-python src/kusto_dashboard_manager.py validate my_dashboard.json
-```
-
-### Import a Dashboard
-
-```bash
-python src/kusto_dashboard_manager.py import my_dashboard.json
-```
-
-## Usage
-
-### Command Line Interface
-
-The tool provides five main commands:
-
-#### 1. Export Command
-
-Export an Azure Data Explorer dashboard to a JSON file.
-
-```bash
-python src/kusto_dashboard_manager.py export <dashboard_url> [-o OUTPUT_FILE]
-```
-
-**Options**:
-- `dashboard_url`: URL of the dashboard to export (required)
-- `-o, --output`: Output file path (default: auto-generated from dashboard name)
-
-**Example**:
-```bash
-python src/kusto_dashboard_manager.py export \
-  "https://dataexplorer.azure.com/dashboards/my-dashboard" \
-  -o exports/dashboard_2024.json
-```
-
-#### 2. Import Command
-
-Import a dashboard JSON file into Azure Data Explorer.
-
-```bash
-python src/kusto_dashboard_manager.py import <json_file> [--no-verify]
-```
-
-**Options**:
-- `json_file`: Path to dashboard JSON file (required)
-- `--no-verify`: Skip verification after import (optional)
-
-**Example**:
-```bash
-python src/kusto_dashboard_manager.py import exports/dashboard_2024.json
-```
-
-#### 3. Validate Command
-
-Validate a dashboard JSON file structure.
-
-```bash
-python src/kusto_dashboard_manager.py validate <json_file>
-```
-
-**Example**:
-```bash
-python src/kusto_dashboard_manager.py validate exports/dashboard_2024.json
-```
-
-#### 4. Config Command
-
-View or modify configuration settings.
-
-```bash
-# Show all configuration
-python src/kusto_dashboard_manager.py config
-
-# Get specific value
-python src/kusto_dashboard_manager.py config --get browser.headless
-
-# Set value
-python src/kusto_dashboard_manager.py config --set browser.headless=false
-```
-
-#### 5. Version Command
-
-Display version information.
-
-```bash
-python src/kusto_dashboard_manager.py version
-```
-
-### Global Options
-
-These flags can be used with any command:
-
-- `--verbose, -v`: Enable verbose logging (DEBUG level)
-- `--config-file, -c`: Specify custom configuration file path
-
-**Example**:
-```bash
-python src/kusto_dashboard_manager.py --verbose --config-file custom_config.json export <url>
-```
-
-## Configuration
-
-### Configuration Files
-
-Configuration can be provided via:
-
-1. **Environment variables** (prefix: `KDM_`)
-2. **JSON configuration file** (via `--config-file`)
-3. **Default configuration** (built-in)
-
-### Configuration Structure
-
-```json
-{
-  "browser": {
-    "headless": true,
-    "timeout": 30000,
-    "viewport": {
-      "width": 1920,
-      "height": 1080
-    }
-  },
-  "dashboard": {
-    "base_url": "https://dataexplorer.azure.com/dashboards",
-    "export_timeout": 60000,
-    "wait_for_load": true
-  },
-  "logging": {
-    "enabled": true,
-    "level": "INFO",
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  }
-}
-```
-
-### Environment Variables
-
-Set configuration via environment variables:
-
-```bash
-# Windows (PowerShell)
-$env:KDM_BROWSER_HEADLESS = "false"
-$env:KDM_BROWSER_TIMEOUT = "60000"
-$env:KDM_LOGGING_LEVEL = "DEBUG"
-
-# Linux/macOS
-export KDM_BROWSER_HEADLESS=false
-export KDM_BROWSER_TIMEOUT=60000
-export KDM_LOGGING_LEVEL=DEBUG
-```
-
-### Configuration Priority
-
-1. Command-line arguments (highest priority)
-2. Environment variables
-3. Configuration file (via `--config-file`)
-4. Default configuration (lowest priority)
-
-## Development
-
-### Project Structure
+The easiest way to use the tool is through natural language in Copilot Chat:
 
 ```
-kusto-dashboard-manager/
-├── src/
-│   ├── __init__.py                    # Package initialization
-│   ├── kusto_dashboard_manager.py     # CLI entry point (106 statements, 94% coverage)
-│   ├── config.py                      # Configuration management (76 statements, 96% coverage)
-│   ├── utils.py                       # Utility functions (61 statements, 93% coverage)
-│   ├── browser_manager.py             # Browser automation (45 statements, 100% coverage)
-│   ├── dashboard_export.py            # Export functionality (61 statements, 97% coverage)
-│   ├── dashboard_import.py            # Import functionality (54 statements, 100% coverage)
-│   └── playwright_mcp_client.py       # MCP client wrapper
-├── tests/
-│   ├── conftest.py                    # Pytest fixtures
-│   ├── test_config.py                 # Config tests (14 tests)
-│   ├── test_utils.py                  # Utils tests (18 tests)
-│   ├── test_browser_manager.py        # Browser tests (18 tests)
-│   ├── test_dashboard_export.py       # Export tests (22 tests)
-│   ├── test_dashboard_import.py       # Import tests (23 tests)
-│   └── test_cli.py                    # CLI tests (35 tests)
-├── requirements.txt                   # Python dependencies
-├── pytest.ini                         # Pytest configuration
-└── README.md                          # This file
+Export all my dashboards by Jason Gilbertson
 ```
 
-### Setting Up Development Environment
+Copilot will automatically:
 
-1. **Clone and install**:
-   ```bash
-   git clone https://github.com/jagilber/kusto-dashboard-manager.git
-   cd kusto-dashboard-manager
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt  # Development dependencies
+1. Navigate to your Azure Data Explorer dashboards page
+2. Capture a snapshot of the dashboard list
+3. Parse the snapshot to find dashboards by the specified creator
+4. Return the list of matching dashboards
+
+### Manual Workflow (for testing)
+
+You can also call the MCP tools manually:
+
+1. **Get dashboard snapshot** (using Playwright MCP):
+
+   ```
+   @playwright navigate to https://dataexplorer.azure.com/dashboards
+   @playwright wait 8 seconds
+   @playwright snapshot
    ```
 
-2. **Run tests**:
-   ```bash
-   pytest tests/ -v
+2. **Parse dashboards** (using Kusto Dashboard Manager):
+
+   ```
+   @kusto-dashboard-manager parse_dashboards_from_snapshot
+   Pass the snapshot raw YAML from previous step
+   Filter by creator: Jason Gilbertson
    ```
 
-3. **Check coverage**:
-   ```bash
-   pytest tests/ --cov=src --cov-report=term-missing
+### Export Individual Dashboard
+
+To export a specific dashboard to JSON:
+
+```
+@kusto-dashboard-manager export_dashboard
+URL: https://dataexplorer.azure.com/dashboards/12345
+```
+
+## MCP Tools
+
+The MCP server exposes 5 tools that can be called via GitHub Copilot or programmatically:
+
+### 1. parse_dashboards_from_snapshot
+
+Parse dashboard information from a Playwright browser snapshot (YAML format).
+
+**Parameters**:
+
+- `snapshot_yaml` (string, required): Raw YAML snapshot from Playwright MCP's accessibility snapshot
+- `creator_filter` (string, optional): Filter dashboards by creator name (e.g., "Jason Gilbertson")
+
+**Returns**: List of dashboard objects with URL, name, creator, and last_modified
+
+**Example via Copilot**:
+
+```
+Parse the snapshot and show me all dashboards by Jason Gilbertson
+```
+
+### 2. export_dashboard
+
+Export a single Azure Data Explorer dashboard to JSON format.
+
+**Parameters**:
+
+- `dashboard_url` (string, required): URL of the dashboard to export
+- `output_file` (string, optional): Path to save JSON file
+
+**Returns**: Dashboard JSON or file path
+
+**Example via Copilot**:
+
+```
+@kusto-dashboard-manager export this dashboard: https://dataexplorer.azure.com/dashboards/my-dashboard
+```
+
+### 3. import_dashboard
+
+Import a dashboard from a JSON file into Azure Data Explorer.
+
+**Parameters**:
+
+- `json_file` (string, required): Path to dashboard JSON file
+
+**Returns**: Success confirmation
+
+**Example via Copilot**:
+
+```
+@kusto-dashboard-manager import the dashboard from dashboard.json
+```
+
+### 4. validate_dashboard
+
+Validate a dashboard JSON file structure without importing.
+
+**Parameters**:
+
+- `json_file` (string, required): Path to dashboard JSON file
+
+**Returns**: Validation result (success/failure with errors)
+
+**Example via Copilot**:
+
+```
+@kusto-dashboard-manager validate dashboard.json
+```
+
+### 5. export_all_dashboards
+
+Export all dashboards matching criteria (typically used after parsing snapshot).
+
+**Parameters**:
+
+- `snapshot_yaml` (string, required): Raw YAML snapshot from Playwright MCP
+- `creator_filter` (string, optional): Filter dashboards by creator name
+- `output_dir` (string, optional): Directory to save JSON files
+
+**Returns**: List of exported dashboard file paths
+
+**Example via Copilot**:
+
+```
+Export all dashboards by Jason Gilbertson to the exports/ folder
+```
+
+### Workflow: Bulk Export
+
+The typical workflow for exporting multiple dashboards:
+
+1. **Navigate to dashboards** (Playwright MCP):
+
+   ```
+   @playwright navigate to https://dataexplorer.azure.com/dashboards
    ```
 
-4. **Run specific test file**:
-   ```bash
-   pytest tests/test_cli.py -v
+2. **Wait for page load** (Playwright MCP):
+
    ```
+   @playwright wait 8 seconds
+   ```
+
+3. **Capture snapshot** (Playwright MCP):
+
+   ```
+   @playwright snapshot
+   ```
+
+4. **Export all dashboards** (Kusto Dashboard Manager):
+
+   ```
+   @kusto-dashboard-manager export_all_dashboards
+   Pass snapshot YAML from step 3
+   Filter by creator: Jason Gilbertson
+   Output directory: exports/
+   ```
+
+Or simply ask Copilot in natural language:
+
+```
+Export all my Azure Data Explorer dashboards by Jason Gilbertson
+```
 
 ## Testing
 
 ### Test Suite Overview
 
-The project includes 130 comprehensive tests across 6 test files:
+The project includes comprehensive test clients achieving **100% pass rates**:
 
-| Module | Tests | Coverage | Description |
-|--------|-------|----------|-------------|
-| `config.py` | 14 | 96% | Configuration management |
-| `utils.py` | 18 | 93% | Utility functions |
-| `browser_manager.py` | 18 | 100% | Browser automation |
-| `dashboard_export.py` | 22 | 97% | Dashboard export |
-| `dashboard_import.py` | 23 | 100% | Dashboard import |
-| `kusto_dashboard_manager.py` | 35 | 94% | CLI interface |
-| **Total** | **130** | **94-100%** | Full test suite |
+| Client | Type | Pass Rate | Tests | Runtime |
+|--------|------|-----------|-------|---------|
+| `test-js-kusto.js` | JavaScript | ✅ 100% | 3/3 | ~750ms |
+| `test-js-playwright.js` | JavaScript | ✅ 100% | 7/7 | ~2.5s |
+| `test_mcp_client.py` | Python | ✅ 100% | 3/3 | ~1.4s |
 
 ### Running Tests
 
+**JavaScript Tests (requires Node.js 22.20.0+)**:
+
 ```bash
-# Run all tests
-pytest tests/ -v
+cd client
 
-# Run with coverage
-pytest tests/ --cov=src --cov-report=html
+# Install dependencies
+npm install
 
-# Run specific test class
-pytest tests/test_cli.py::TestArgumentParsing -v
+# Test Kusto Dashboard Manager MCP server
+npm run test:kusto
 
-# Run with verbose output
-pytest tests/ -v --tb=short
+# Test Playwright MCP server integration
+npm run test:playwright
 
-# Run in parallel (faster)
-pytest tests/ -n auto
+# Debug mode (with detailed output)
+npm run test:kusto:debug
+npm run test:playwright:debug
 ```
 
-### Test Categories
+**Python Tests**:
 
-1. **Unit Tests** (`test_config.py`, `test_utils.py`)
-   - Configuration management
-   - Validation functions
-   - File operations
-   - Logger functionality
-
-2. **Integration Tests** (`test_browser_manager.py`, `test_dashboard_export.py`, `test_dashboard_import.py`)
-   - Browser automation with mock MCP
-   - Dashboard extraction
-   - Metadata enrichment
-   - Import workflow
-
-3. **CLI Tests** (`test_cli.py`)
-   - Argument parsing
-   - Command execution
-   - Error handling
-   - Integration workflows
-
-### Mock MCP Client
-
-Tests use a `MockMCPClient` that simulates Playwright MCP server responses:
-
-```python
-# Example test setup
-@pytest.fixture
-def mock_mcp_client():
-    return MockMCPClient()
-
-async def test_export(mock_mcp_client):
-    mock_mcp_client.set_response("mcp_playwright_browser_navigate", {"success": True})
-    # Test code here
+```bash
+# Test Kusto Dashboard Manager MCP server
+python client/test_mcp_client.py
 ```
+
+### Test Client Details
+
+#### test-js-kusto.js
+
+JavaScript MCP SDK client for testing `kusto-dashboard-manager`:
+
+- **Tests**: Connection, Tool Discovery (5 tools), Parse Dashboards
+- **Protocol**: Content-Length framing via `StdioClientTransport`
+- **Features**: Comprehensive error handling, pretty output formatting
+
+#### test-js-playwright.js
+
+JavaScript client validating MCP SDK with official Playwright MCP:
+
+- **Tests**: Connection, navigation, snapshot, screenshot, click, etc.
+- **Purpose**: Validates MCP SDK functionality with production MCP server
+
+#### test_mcp_client.py
+
+Standalone Python client with direct JSON-RPC implementation:
+
+- **Tests**: Connection, Tool Discovery, Parse Dashboards
+- **Protocol**: Newline-delimited JSON (simpler than Content-Length)
+- **Features**: Async subprocess management, ~200 lines of code
+
+### Documentation
+
+For detailed testing information, see:
+
+- **[CLIENT_TESTING.md](client/CLIENT_TESTING.md)**: Comprehensive testing guide
+  - Client inventory and status
+  - MCP protocol details
+  - **Playwright snapshot YAML format specification**
+  - Test recommendations and troubleshooting
+
+- **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)**: Complete test results
+  - Executive summary
+  - All issues found and fixed
+  - Performance metrics
+  - Recommendations for next steps
+
+## Development
+
+### Project Structure
+
+```text
+kusto-dashboard-manager/
+├── src/
+│   ├── __init__.py                    # Package initialization
+│   ├── mcp_server.py                  # MCP server main entry point
+│   ├── dashboard_export.py            # Dashboard parsing and export logic
+│   ├── dashboard_import.py            # Dashboard import functionality
+│   ├── dashboard_validate.py         # Dashboard JSON validation
+│   └── tracer.py                      # File-based logging/tracing
+├── client/
+│   ├── test-js-kusto.js              # JavaScript MCP SDK test client
+│   ├── test-js-playwright.js         # Playwright MCP validation client
+│   ├── test_mcp_client.py            # Python direct JSON-RPC client
+│   ├── package.json                  # npm configuration
+│   ├── CLIENT_TESTING.md             # Comprehensive testing guide
+│   └── README.md                     # Quick start for test clients
+├── docs/
+│   ├── MCP_ARCHITECTURE_ISSUE.md     # MCP architecture explanation
+│   ├── MCP_USAGE_GUIDE.md            # Usage patterns and examples
+│   └── TRACING.md                    # Logging and tracing guide
+├── logs/                             # Log files (gitignored)
+├── .vscode/
+│   └── settings.json                 # VS Code MCP configuration
+├── requirements.txt                  # Python dependencies
+├── TESTING_SUMMARY.md                # Complete test results
+└── README.md                         # This file
+```
+
+### Setting Up Development Environment
+
+1. **Clone and install**:
+
+   ```bash
+   git clone https://github.com/jagilber/kusto-dashboard-manager.git
+   cd kusto-dashboard-manager
+   pip install -r requirements.txt
+   ```
+
+2. **Configure VS Code MCP** (add to `.vscode/settings.json`):
+
+   ```json
+   {
+     "github.copilot.chat.mcp.enabled": true,
+     "github.copilot.chat.mcp.servers": {
+       "playwright": {
+         "command": "npx",
+         "args": ["@playwright/mcp@latest"]
+       },
+       "kusto-dashboard-manager": {
+         "command": "python",
+         "args": ["-u", "src/mcp_server.py"]
+       }
+     }
+   }
+   ```
+
+3. **Run tests**:
+
+   ```bash
+   # JavaScript tests
+   cd client && npm install && npm run test:kusto
+   
+   # Python tests
+   python client/test_mcp_client.py
+   ```
+
+4. **Test in VS Code**:
+   - Reload window (Ctrl+Shift+P → "Developer: Reload Window")
+   - Open Copilot Chat
+   - Try: `Export all dashboards by Jason Gilbertson`
 
 ## Architecture
 
-### System Overview
+### MCP Integration Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Kusto Dashboard Manager                   │
-│                         (CLI Tool)                           │
-└─────────────────────────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│                        VS Code / GitHub Copilot                   │
+│                      (MCP Client / Orchestrator)                  │
+└──────────────────────────────────────────────────────────────────┘
                               │
-                              │ Commands
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │      kusto_dashboard_manager.py         │
-        │         (CLI Entry Point)               │
-        └─────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┴─────────────────────┐
-        │                                           │
-        ▼                                           ▼
-┌──────────────────┐                    ┌──────────────────┐
-│ DashboardExporter│                    │ DashboardImporter│
-│   (Export Logic) │                    │   (Import Logic) │
-└──────────────────┘                    └──────────────────┘
-        │                                           │
-        └─────────────────────┬─────────────────────┘
-                              │
-                              ▼
-                  ┌──────────────────────┐
-                  │   BrowserManager     │
-                  │ (Browser Automation) │
-                  └──────────────────────┘
-                              │
-                              ▼
-                  ┌──────────────────────┐
-                  │ PlaywrightMCPClient  │
-                  │   (MCP Protocol)     │
-                  └──────────────────────┘
-                              │
-                              ▼
-                  ┌──────────────────────┐
-                  │   Playwright MCP     │
-                  │      Server          │
-                  └──────────────────────┘
-                              │
-                              ▼
-                  ┌──────────────────────┐
-                  │   Browser (Chrome)   │
-                  └──────────────────────┘
+            ┌─────────────────┴──────────────────┐
+            │                                    │
+            ▼                                    ▼
+┌────────────────────────┐          ┌────────────────────────┐
+│   Playwright MCP       │          │ Kusto Dashboard Manager│
+│   Server (Node.js)     │          │   MCP Server (Python)  │
+│                        │          │                        │
+│  Tools:                │          │  Tools:                │
+│  - navigate            │          │  - parse_dashboards    │
+│  - snapshot            │          │  - export_dashboard    │
+│  - click               │          │  - import_dashboard    │
+│  - screenshot          │          │  - validate_dashboard  │
+│  - wait_for            │          │  - export_all          │
+└────────────────────────┘          └────────────────────────┘
+            │                                    │
+            ▼                                    ▼
+      ┌──────────┐                    ┌──────────────────┐
+      │ Chromium │                    │ Dashboard Parser │
+      │ Browser  │                    │ (Regex + YAML)   │
+      └──────────┘                    └──────────────────┘
 ```
 
-### Key Components
+### Key Design Principles
 
-1. **CLI Layer** (`kusto_dashboard_manager.py`)
-   - Argument parsing (argparse)
-   - Command routing
-   - Configuration loading
-   - Logger setup
+1. **Isolated MCP Servers**
+   - Each MCP server runs in a separate process
+   - Servers communicate via stdio (JSON-RPC protocol)
+   - **No direct server-to-server communication**
+   - VS Code/Copilot orchestrates all cross-server calls
 
-2. **Export Module** (`dashboard_export.py`)
-   - Dashboard URL extraction
-   - DOM element selection
-   - JSON serialization
-   - Metadata enrichment
+2. **Client Orchestration**
+   - User makes request via Copilot Chat
+   - Copilot determines which tools to call and in what order
+   - Copilot passes data between servers as needed
+   - Example: Playwright snapshot → Copilot → Kusto parser
 
-3. **Import Module** (`dashboard_import.py`)
-   - File validation
-   - Metadata stripping
-   - JavaScript injection
-   - Browser navigation
+3. **Browser Automation**
+   - Playwright MCP handles all browser interactions
+   - Kusto Dashboard Manager never touches browser directly
+   - Accessibility snapshots provide structured YAML representation
 
-4. **Browser Manager** (`browser_manager.py`)
-   - MCP client wrapper
-   - Browser lifecycle management
-   - Navigation and interaction
-   - Script execution
+### Component Details
 
-5. **Configuration** (`config.py`)
-   - Environment variable parsing
-   - JSON file loading
-   - Nested key access
-   - Validation
+#### 1. MCP Server (`src/mcp_server.py`)
 
-6. **Utilities** (`utils.py`)
-   - Logging setup
-   - JSON validation
-   - File operations
-   - Output formatting
+- **Protocol**: JSON-RPC 2.0 over stdio
+- **Transport**: Newline-delimited JSON or Content-Length framing
+- **Tools**: 5 tools exposed to Copilot
+- **Logging**: File-based only (stdout reserved for JSON-RPC)
+- **Error Handling**: Proper MCP error responses
 
-### Data Flow
+#### 2. Dashboard Export (`src/dashboard_export.py`)
 
-#### Export Flow
+- **Input**: Playwright accessibility snapshot (YAML)
+- **Parsing**: Regex-based extraction of dashboard metadata
+- **Output**: List of dashboard objects (URL, name, creator, date)
+- **Filtering**: Creator-based filtering support
 
+#### 3. Dashboard Import (`src/dashboard_import.py`)
+
+- **Input**: Dashboard JSON file
+- **Validation**: Schema validation before import
+- **Method**: JavaScript injection via Playwright
+- **Verification**: Optional post-import check
+
+#### 4. Tracing (`src/tracer.py`)
+
+- **Critical Fix**: No stdout logging (prevents JSON-RPC corruption)
+- **File-based**: All logs written to `logs/` directory
+- **Format**: Timestamped entries with log level
+- **Usage**: Debug MCP server issues without disrupting protocol
+
+### Data Flow: Bulk Export
+
+```text
+User Request (Copilot Chat)
+    │
+    │ "Export all dashboards by Jason Gilbertson"
+    │
+    ▼
+Copilot Determines Workflow
+    │
+    ├─► Step 1: @playwright navigate (https://dataexplorer.azure.com/dashboards)
+    │       └─► Playwright MCP: Opens browser, navigates
+    │
+    ├─► Step 2: @playwright wait (8 seconds)
+    │       └─► Playwright MCP: Waits for page load
+    │
+    ├─► Step 3: @playwright snapshot
+    │       └─► Playwright MCP: Captures accessibility tree as YAML
+    │       └─► Returns: snapshot_yaml (raw YAML text)
+    │
+    └─► Step 4: @kusto-dashboard-manager export_all_dashboards
+            └─► Parameters:
+                - snapshot_yaml: (from Step 3)
+                - creator_filter: "Jason Gilbertson"
+            └─► Processing:
+                - Parse YAML with regex
+                - Extract: URL, name, creator, date
+                - Filter by creator
+                - Return list of matching dashboards
+            └─► Returns: [{url, name, creator, last_modified}, ...]
 ```
-User Command → CLI Parser → DashboardExporter
-    ↓
-BrowserManager → MCP Client → Browser Launch
-    ↓
-Navigate to Dashboard URL
-    ↓
-Extract Dashboard Data (JavaScript execution)
-    ↓
-Enrich with Metadata (timestamp, URL, version)
-    ↓
-Validate JSON Structure
-    ↓
-Write to File → Success Message
+
+### Non-Standard YAML Format
+
+The Playwright accessibility snapshot uses a **non-standard YAML format** that cannot be parsed by standard YAML libraries. See [CLIENT_TESTING.md](client/CLIENT_TESTING.md) for details.
+
+**Key characteristics**:
+
+- Indentation-based structure
+- `/url:`, `/name:`, `rowheader`, `text` tags
+- Date format: `MM/DD/YYYY, HH:MM AM/PM`
+- No proper YAML key-value pairs
+
+**Example**:
+
+```yaml
+- row "Jason Gilbertson Analytics Dashboard" (creator: Jason Gilbertson):
+  - cell "Jason Gilbertson Analytics Dashboard":
+    - link "Jason Gilbertson Analytics Dashboard":
+      /url: /dashboards/12345-67890-abcdef
+      /name: Jason Gilbertson Analytics Dashboard
+    - text "Jason Gilbertson":
+      rowheader "Jason Gilbertson"
+    - text "01/15/2024, 3:45 PM"
 ```
 
-#### Import Flow
+### Protocol Details
 
+**JSON-RPC 2.0 Message Format**:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "export_all_dashboards",
+    "arguments": {
+      "snapshot_yaml": "...",
+      "creator_filter": "Jason Gilbertson"
+    }
+  }
+}
 ```
-User Command → CLI Parser → DashboardImporter
-    ↓
-Validate Dashboard JSON File
-    ↓
-Strip Export Metadata (_metadata key)
-    ↓
-BrowserManager → MCP Client → Browser Launch
-    ↓
-Navigate to /new Endpoint
-    ↓
-Inject Dashboard JSON (2 methods: window variable, custom event)
-    ↓
-Verify Import (optional) → Success Message
+
+**Response Format**:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[{\"url\": \"...\", \"name\": \"...\"}]"
+      }
+    ]
+  }
+}
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. "Module not found" error
+#### 1. MCP tools not appearing in Copilot
 
-**Problem**: Python can't find the `src` modules.
+**Problem**: `@kusto-dashboard-manager` or `@playwright` not available in Copilot Chat.
 
 **Solution**:
+
+1. Verify `.vscode/settings.json` has correct MCP configuration
+2. Reload VS Code window: `Ctrl+Shift+P` → "Developer: Reload Window"
+3. Check Copilot output panel for MCP server startup errors
+4. Verify Python/Node.js are in PATH
+
+#### 2. MCP server fails to start
+
+**Problem**: Error in Copilot output: "Failed to start MCP server".
+
+**Solution**:
+
 ```bash
-# Add src to PYTHONPATH
-export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"  # Linux/macOS
-$env:PYTHONPATH += ";$(pwd)\src"              # Windows PowerShell
+# Test server manually
+python -u src/mcp_server.py
+
+# Should see initialization message in logs/mcp_server.log
+# Check for errors in logs/
+
+# Common issues:
+# - Missing dependencies: pip install -r requirements.txt
+# - Wrong Python version: Use Python 3.12+
+# - Syntax errors: Check recent code changes
 ```
 
-#### 2. MCP server connection fails
+#### 3. Dashboard parsing returns empty results
 
-**Problem**: Can't connect to Playwright MCP server.
+**Problem**: `parse_dashboards_from_snapshot` returns `[]`.
 
 **Solution**:
+
+- Ensure you waited long enough for page load (8+ seconds)
+- Verify you're logged into Azure Data Explorer
+- Check snapshot YAML contains dashboard rows
+- Try without creator filter first to see all dashboards
+- Review logs in `logs/dashboard_export.log`
+
+#### 4. "Invalid JSON-RPC response" error
+
+**Problem**: MCP client reports protocol errors.
+
+**Solution**:
+
+- **Most common cause**: Logging to stdout in MCP server
+- Check `src/tracer.py` has NO stdout handlers
+- Verify all `print()` statements removed from MCP server
+- Review recent code changes that might write to stdout
+
+#### 5. Browser automation fails
+
+**Problem**: Playwright MCP reports navigation errors.
+
+**Solution**:
+
 ```bash
 # Verify Playwright MCP is installed
 npx @playwright/mcp@latest --version
 
-# Check if server is running
-ps aux | grep playwright  # Linux/macOS
-Get-Process | Where-Object {$_.ProcessName -like "*node*"}  # Windows
+# Test Playwright MCP manually
+npx @playwright/mcp@latest
+
+# Should start server, then test with:
+# {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
 ```
 
-#### 3. Browser launch timeout
+#### 6. Creator filter not working
 
-**Problem**: Browser fails to launch within timeout.
-
-**Solution**:
-- Increase timeout in configuration:
-  ```json
-  {
-    "browser": {
-      "timeout": 60000
-    }
-  }
-  ```
-- Or use environment variable:
-  ```bash
-  export KDM_BROWSER_TIMEOUT=60000
-  ```
-
-#### 4. Dashboard extraction fails
-
-**Problem**: Can't extract dashboard data from page.
+**Problem**: Dashboards by other creators included in results.
 
 **Solution**:
-- Verify you're logged into Azure Data Explorer
-- Check dashboard URL is correct
-- Try with headless mode disabled:
-  ```bash
-  python src/kusto_dashboard_manager.py --config-file config.json export <url>
-  # config.json: {"browser": {"headless": false}}
-  ```
 
-#### 5. Import injection fails
-
-**Problem**: Dashboard data not injected properly.
-
-**Solution**:
-- The tool uses two fallback methods for injection
-- Check browser console for errors (with headless=false)
-- Verify dashboard JSON is valid:
-  ```bash
-  python src/kusto_dashboard_manager.py validate dashboard.json
-  ```
+- Creator matching is **case-sensitive**
+- Use exact name as it appears in dashboard list
+- Example: "Jason Gilbertson" not "jason gilbertson"
+- Check logs for actual creator names found
 
 ### Debug Mode
 
-Enable verbose logging for detailed troubleshooting:
+**Enable file-based logging**:
 
-```bash
-python src/kusto_dashboard_manager.py --verbose export <url>
+All logs are automatically written to `logs/` directory:
+
+- `logs/mcp_server.log` - MCP server operations
+- `logs/dashboard_export.log` - Dashboard parsing
+- `logs/dashboard_import.log` - Dashboard import
+- `logs/dashboard_validate.log` - Validation
+
+**Increase log verbosity** (edit `src/tracer.py`):
+
+```python
+# Change INFO to DEBUG
+file_handler.setLevel(logging.DEBUG)
 ```
 
-This will show:
-- MCP client calls
-- Browser automation steps
-- JavaScript execution results
-- Error stack traces
+**Test clients for debugging**:
+
+```bash
+# JavaScript client (most verbose)
+cd client
+npm run test:kusto:debug
+
+# Python client
+python client/test_mcp_client.py
+```
+
+### Known Limitations
+
+1. **No direct server-to-server communication**: By MCP protocol design, servers cannot call each other
+2. **Non-standard YAML parsing**: Playwright snapshots use custom format, requires regex parsing
+3. **Authentication**: Must be logged into Azure Data Explorer in browser before exporting
+4. **Single-threaded**: One MCP request at a time (async within requests)
+
+### Getting Help
+
+If you're still stuck:
+
+1. Check [CLIENT_TESTING.md](client/CLIENT_TESTING.md) for detailed testing guide
+2. Review [MCP_ARCHITECTURE_ISSUE.md](docs/MCP_ARCHITECTURE_ISSUE.md) for architecture details
+3. Check [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for known issues and fixes
+4. Open a GitHub issue with:
+   - Error message
+   - Relevant log files from `logs/`
+   - Steps to reproduce
+   - VS Code and Copilot versions
 
 ## Contributing
 
@@ -573,27 +730,37 @@ Contributions are welcome! Please follow these guidelines:
 ### Development Workflow
 
 1. **Fork the repository**
+
 2. **Create a feature branch**:
+
    ```bash
    git checkout -b feature/my-new-feature
    ```
 
 3. **Make your changes**:
-   - Write code following existing style
+   - Write code following existing style (PEP 8)
+   - **CRITICAL**: Never use `print()` or log to stdout in MCP server (corrupts JSON-RPC)
    - Add tests for new functionality
    - Update documentation
 
 4. **Run tests**:
+
    ```bash
-   pytest tests/ -v --cov=src
+   # JavaScript tests
+   cd client && npm run test:kusto
+   
+   # Python tests
+   python client/test_mcp_client.py
    ```
 
 5. **Commit changes**:
+
    ```bash
-   git commit -am "Add new feature: description"
+   git commit -am "feat: Add new feature description"
    ```
 
 6. **Push to your fork**:
+
    ```bash
    git push origin feature/my-new-feature
    ```
@@ -602,25 +769,34 @@ Contributions are welcome! Please follow these guidelines:
 
 ### Code Style
 
-- Follow PEP 8 style guidelines
-- Use type hints where possible
-- Write docstrings for all public functions
-- Keep functions focused and testable
-- Aim for 90%+ test coverage
+- **Follow PEP 8** style guidelines
+- **Use type hints** where possible
+- **Write docstrings** for all public functions (Google style)
+- **Never log to stdout** in MCP server code (use `src/tracer.py` file logging)
+- **Keep functions focused** and testable
+- **Handle errors gracefully** with proper MCP error responses
 
 ### Testing Requirements
 
-- All new features must include tests
-- Tests should cover success and failure cases
-- Use pytest fixtures for common setup
-- Mock external dependencies (MCP client, file I/O)
+- All new MCP tools must include test cases in test clients
+- Test both success and failure scenarios
+- Update test clients (`test-js-kusto.js`, `test_mcp_client.py`)
+- Ensure 100% pass rate before submitting PR
 
-### Documentation
+### Documentation Requirements
 
-- Update README.md for new features
-- Add docstrings to all public APIs
-- Include usage examples
-- Update CHANGELOG.md
+- Update [README.md](README.md) for new features
+- Update [CLIENT_TESTING.md](client/CLIENT_TESTING.md) for test changes
+- Add inline comments for complex logic (especially regex parsing)
+- Include usage examples in tool descriptions
+
+### MCP-Specific Guidelines
+
+1. **Tool Descriptions**: Be clear about Copilot orchestration requirements
+2. **Parameter Validation**: Validate all inputs before processing
+3. **Error Responses**: Return proper MCP error objects
+4. **Logging**: Use file-based logging only (never stdout)
+5. **Testing**: Test with both JavaScript SDK and Python direct clients
 
 ## License
 
@@ -628,9 +804,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **PowerShell Reference**: Based on the original PowerShell implementation
-- **Playwright MCP**: Uses the [@playwright/mcp](https://www.npmjs.com/package/@playwright/mcp) protocol
+- **Model Context Protocol**: [MCP Specification](https://modelcontextprotocol.io/)
+- **Playwright MCP**: [@playwright/mcp](https://www.npmjs.com/package/@playwright/mcp) official MCP server
+- **JavaScript MCP SDK**: [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/sdk)
 - **Azure Data Explorer**: Microsoft's big data analytics platform
+- **VS Code MCP Integration**: GitHub Copilot MCP support
 
 ## Support
 
@@ -638,33 +816,48 @@ For questions, issues, or feature requests:
 
 - **Issues**: [GitHub Issues](https://github.com/jagilber/kusto-dashboard-manager/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/jagilber/kusto-dashboard-manager/discussions)
-- **Email**: [Contact maintainer](mailto:jagilber@example.com)
+- **Documentation**:
+  - [CLIENT_TESTING.md](client/CLIENT_TESTING.md) - Testing guide
+  - [TESTING_SUMMARY.md](TESTING_SUMMARY.md) - Test results
+  - [MCP_ARCHITECTURE_ISSUE.md](docs/MCP_ARCHITECTURE_ISSUE.md) - Architecture details
 
 ## Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.0.0 (2024)
 
-**Features**:
-- ✅ Export dashboards to JSON with metadata
-- ✅ Import dashboards from JSON files
-- ✅ Validate dashboard JSON structure
-- ✅ Configuration management (env vars, JSON files)
-- ✅ Comprehensive CLI with 5 commands
-- ✅ 130 tests with 94-100% coverage
-- ✅ Browser automation via Playwright MCP
+**Major Features**:
+
+- ✅ MCP server with 5 tools for dashboard management
+- ✅ VS Code + GitHub Copilot integration
+- ✅ Playwright MCP integration for browser automation
+- ✅ Bulk dashboard export with creator filtering
+- ✅ Dashboard import/export/validate functionality
+- ✅ Accessibility snapshot parsing (non-standard YAML)
+- ✅ Comprehensive test suite (100% pass rate)
+- ✅ File-based logging and tracing
+
+**Bug Fixes**:
+
+- 🐛 Fixed stdout logging corruption in MCP server
+- 🐛 Fixed invalid date format in tracer
+- 🐛 Fixed dashboard parsing loop logic
+- 🐛 Added "type": "module" to package.json
 
 **Known Limitations**:
+
 - Requires manual Azure login before export
-- No support for dashboard permissions export
-- No batch export/import functionality
+- Creator filtering is case-sensitive
+- Non-standard YAML format requires regex parsing (no library support)
+- No direct server-to-server communication (by MCP protocol design)
 
 **Future Enhancements**:
-- Batch operations for multiple dashboards
+
+- Batch export to individual JSON files
 - Dashboard diff/merge capabilities
 - Export/import dashboard permissions
+- Dashboard versioning and history
 - CI/CD integration examples
-- Docker container support
 
 ---
 
-**Made with ❤️ for Azure Data Explorer users**
+**Made with ❤️ for Azure Data Explorer users and MCP enthusiasts**
