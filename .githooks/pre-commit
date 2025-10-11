@@ -88,8 +88,46 @@ if [ -f "$ALLOWLIST_FILE" ]; then
     done < "$ALLOWLIST_FILE"
 fi
 
-# Always allow ephemeral synthetic test artifact directories
-ALLOWLIST_GLOBS="$ALLOWLIST_GLOBS tmp-test/* tmp-test-consistency/* tmp-test/** tmp-test-consistency/**"
+# Always allow ephemeral synthetic test artifact directories and template files
+ALLOWLIST_GLOBS="$ALLOWLIST_GLOBS tmp-test/* tmp-test-consistency/* tmp-test/** tmp-test-consistency/** .env.example .env.template .env.sample"
+
+#############################################
+# Dynamic Real Name Detection
+#
+# Check for git user name from configuration or .env file
+# to prevent accidental commits of developer's real name in examples
+#############################################
+
+# Get git user name (split into first and last for pattern matching)
+GIT_USER_NAME=$(git config user.name 2>/dev/null || echo "")
+GIT_USER_EMAIL=$(git config user.email 2>/dev/null || echo "")
+
+# Read PII_OWNER_NAME from .env if it exists (allows override)
+if [ -f ".env" ]; then
+    # shellcheck disable=SC1091
+    . ./.env 2>/dev/null || true
+fi
+
+# Build dynamic name pattern from git config
+REAL_NAME_PATTERN=""
+if [ -n "$PII_OWNER_NAME" ]; then
+    # Use explicit override from .env
+    REAL_NAME_PATTERN="$PII_OWNER_NAME"
+    echo "ℹ️  Using custom PII_OWNER_NAME from .env for name detection"
+elif [ -n "$GIT_USER_NAME" ]; then
+    # Use git config user.name
+    # Escape special regex characters and create pattern
+    ESCAPED_NAME=$(echo "$GIT_USER_NAME" | sed 's/[.[\*^$]/\\&/g')
+    # Also check for first and last name separately
+    FIRST_NAME=$(echo "$GIT_USER_NAME" | awk '{print $1}')
+    LAST_NAME=$(echo "$GIT_USER_NAME" | awk '{print $NF}')
+    
+    if [ "$FIRST_NAME" != "$LAST_NAME" ] && [ -n "$FIRST_NAME" ] && [ -n "$LAST_NAME" ]; then
+        REAL_NAME_PATTERN="$ESCAPED_NAME|$FIRST_NAME|$LAST_NAME"
+    else
+        REAL_NAME_PATTERN="$ESCAPED_NAME"
+    fi
+fi
 
 is_redacted_file() {
     _file="$1"
@@ -155,6 +193,40 @@ for pattern in "${PII_PATTERNS[@]}"; do
     fi
 done
 
+# Check for real names (from git config or .env)
+if [ -n "$REAL_NAME_PATTERN" ]; then
+    echo "🔍 Checking for real names in documentation/examples..."
+    MATCH_FILES=$(echo "$STAGED_FILES" | xargs grep -l -i -E "$REAL_NAME_PATTERN" 2>/dev/null || true)
+    CLEANED=""
+    for f in $MATCH_FILES; do
+        case "$f" in
+            *.ts|*.js|.githooks/*|package.json|package-lock.json|*.ps1|*.py)
+                # Skip source code files (names might be in author comments)
+                continue;;
+        esac
+        # Skip allowlisted files
+        if is_allowlisted "$f"; then
+            continue
+        fi
+        # Skip redacted files
+        if echo "$f" | grep -qE '\\.md$' && is_redacted_file "$f"; then
+            continue
+        fi
+        # Only check documentation and example files
+        case "$f" in
+            *.md|*.txt|*.json|*.yaml|*.yml|README*|CHANGELOG*|docs/*|examples/*)
+                CLEANED="$CLEANED $f"
+                ;;
+        esac
+    done
+    if [ -n "$CLEANED" ]; then
+        echo "❌ REAL NAME DETECTED: Found '$GIT_USER_NAME' in documentation/examples:"
+        echo "$CLEANED" | tr ' ' '\n' | sed '/^$/d'
+        echo "   💡 Use placeholder names like 'John Doe' or 'Jane Smith' instead"
+        PII_FOUND=true
+    fi
+fi
+
 # Check for files that should never be committed
 FORBIDDEN_FILES=(
     "*.key"
@@ -163,7 +235,7 @@ FORBIDDEN_FILES=(
     "*.secret"
     "*.mapping"
     "*.obfuscation"
-    ".env*"
+    ".env"
     "keys/*"
     "mappings/*"
     "pii-data/*"
@@ -173,12 +245,21 @@ FORBIDDEN_FILES=(
 # Previous implementation attempted to treat glob patterns (e.g. *.key, .env*) as regex directly with grep -E,
 # causing false positives (e.g. '*.key' interpreted as an invalid/empty regex that could match). Replace with
 # explicit per-file glob matching using a case statement which correctly honors shell glob semantics.
+# Note: .env.example, .env.template, .env.sample are ALLOWED (templates with no secrets)
 ##
 for file in $STAGED_FILES; do
     case "$file" in
-        *.key|*.pii|*.sensitive|*.secret|*.mapping|*.obfuscation|.env*|keys/*|mappings/*|pii-data/*)
+        *.key|*.pii|*.sensitive|*.secret|*.mapping|*.obfuscation|keys/*|mappings/*|pii-data/*)
             echo "❌ FORBIDDEN FILE TYPE: '$file' should never be committed"
             PII_FOUND=true
+            ;;
+        .env)
+            # Block .env file specifically (actual secrets)
+            echo "❌ FORBIDDEN FILE TYPE: '$file' should never be committed"
+            PII_FOUND=true
+            ;;
+        .env.example|.env.template|.env.sample)
+            # Allow .env templates (no actual secrets)
             ;;
     esac
 done
