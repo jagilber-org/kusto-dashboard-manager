@@ -95,7 +95,7 @@ An MCP (Model Context Protocol) server for exporting and importing Azure Data Ex
 The easiest way to use the tool is through natural language in Copilot Chat:
 
 ```
-Export all my dashboards by Jason Gilbertson
+Export all my dashboards by John Doe
 ```
 
 Copilot will automatically:
@@ -122,7 +122,7 @@ You can also call the MCP tools manually:
    ```
    @kusto-dashboard-manager parse_dashboards_from_snapshot
    Pass the snapshot raw YAML from previous step
-   Filter by creator: Jason Gilbertson
+   Filter by creator: John Doe
    ```
 
 ### Export Individual Dashboard
@@ -145,14 +145,14 @@ Parse dashboard information from a Playwright browser snapshot (YAML format).
 **Parameters**:
 
 - `snapshot_yaml` (string, required): Raw YAML snapshot from Playwright MCP's accessibility snapshot
-- `creator_filter` (string, optional): Filter dashboards by creator name (e.g., "Jason Gilbertson")
+- `creator_filter` (string, optional): Filter dashboards by creator name (e.g., "John Doe")
 
 **Returns**: List of dashboard objects with URL, name, creator, and last_modified
 
 **Example via Copilot**:
 
 ```
-Parse the snapshot and show me all dashboards by Jason Gilbertson
+Parse the snapshot and show me all dashboards by John Doe
 ```
 
 ### 2. export_dashboard
@@ -219,7 +219,7 @@ Export all dashboards matching criteria (typically used after parsing snapshot).
 **Example via Copilot**:
 
 ```
-Export all dashboards by Jason Gilbertson to the exports/ folder
+Export all dashboards by John Doe to the exports/ folder
 ```
 
 ### Workflow: Bulk Export
@@ -249,14 +249,14 @@ The typical workflow for exporting multiple dashboards:
    ```
    @kusto-dashboard-manager export_all_dashboards
    Pass snapshot YAML from step 3
-   Filter by creator: Jason Gilbertson
+   Filter by creator: John Doe
    Output directory: exports/
    ```
 
 Or simply ask Copilot in natural language:
 
 ```
-Export all my Azure Data Explorer dashboards by Jason Gilbertson
+Export all my Azure Data Explorer dashboards by John Doe
 ```
 
 ## Testing
@@ -413,7 +413,7 @@ kusto-dashboard-manager/
 4. **Test in VS Code**:
    - Reload window (Ctrl+Shift+P → "Developer: Reload Window")
    - Open Copilot Chat
-   - Try: `Export all dashboards by Jason Gilbertson`
+   - Try: `Export all dashboards by John Doe`
 
 ## Architecture
 
@@ -543,13 +543,13 @@ The Playwright accessibility snapshot uses a **non-standard YAML format** that c
 **Example**:
 
 ```yaml
-- row "Jason Gilbertson Analytics Dashboard" (creator: Jason Gilbertson):
-  - cell "Jason Gilbertson Analytics Dashboard":
-    - link "Jason Gilbertson Analytics Dashboard":
+- row "Sales Analytics Dashboard" (creator: John Doe):
+  - cell "Sales Analytics Dashboard":
+    - link "Sales Analytics Dashboard":
       /url: /dashboards/12345-67890-abcdef
-      /name: Jason Gilbertson Analytics Dashboard
-    - text "Jason Gilbertson":
-      rowheader "Jason Gilbertson"
+      /name: Sales Analytics Dashboard
+    - text "John Doe":
+      rowheader "John Doe"
     - text "01/15/2024, 3:45 PM"
 ```
 
