@@ -1,0 +1,211 @@
+#!/bin/sh
+# Pre-commit hook to prevent PII data from being committed
+# This is CRITICAL for security in a PII handling project
+
+echo "🔒 Running pre-commit security checks..."
+
+# Check for potential PII patterns in staged files
+echo "🔍 Scanning for PII patterns..."
+
+# Common PII patterns to detect (enhanced with Azure-specific patterns)
+PII_PATTERNS=(
+    "ssn|social.security"
+    "\b\d{3}-\d{2}-\d{4}\b"  # SSN format
+    "\b[0-9]{4}[[:space:]-]?[0-9]{4}[[:space:]-]?[0-9]{4}[[:space:]-]?[0-9]{4}\b"  # Credit card
+    "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"  # Email addresses (if not synthetic)
+    "\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b"  # IP addresses (if not example IPs)
+    "\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"  # GUIDs
+    "password.*[:=]"
+    "api[_-]?key"
+    "secret[_-]?key"
+    "private[_-]?key"
+    "diagnostic-logs-\d+"  # Specific log directory patterns
+    "AZRVPSF\d+"  # Computer name patterns
+    "\.corp\.[a-z]+\.[a-z]+"  # Corporate domain patterns
+    "C:\\\\github\\\\[a-zA-Z]+"  # Personal GitHub paths
+    
+    # === MICROSOFT-SPECIFIC PATTERNS ===
+    # Microsoft case numbers (13-16 digits)
+    "\b\d{13,16}\b"
+    
+    # === AZURE-SPECIFIC SECURITY PATTERNS ===
+    # Certificate thumbprints (40-character hex strings)
+    "\b[a-fA-F0-9]{40}\b"
+    # Key Vault references
+    "@Microsoft\.KeyVault\(SecretUri=https://[^)]+\)"
+    # Azure Storage connection strings
+    "DefaultEndpointsProtocol=(https?);AccountName=[^;]+;AccountKey=[^;]+"
+    "AccountName=[^;]+;AccountKey=[^;]+"
+    # SAS tokens
+    "\?sv=[0-9]{4}-[0-9]{2}-[0-9]{2}[^&\s]*&sig=[A-Za-z0-9+/%]+={0,2}"
+    "SharedAccessSignature=sv=[^;\s]+&sig=[^;\s]+"
+    # Azure Storage Account Keys (512-bit base64)
+    "[A-Za-z0-9+/]{86}=="
+    # Service Fabric encrypted secrets
+    'IsEncrypted="true"[^>]*>([A-Za-z0-9+/]+={0,2})<'
+    # Azure resource identifiers with subscription IDs
+    "/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    # Application Insights instrumentation keys
+    "InstrumentationKey=[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    # Cosmos DB keys (64-88 character base64)
+    "[A-Za-z0-9+/]{64,88}={0,2}"
+    # Azure AD tenant IDs and app IDs
+    "tenant[_-]?id.*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    "client[_-]?id.*[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "✅ No staged files to check"
+    exit 0
+fi
+
+#############################################
+# Allowlist / False Positive Management
+#
+# To intentionally include synthetic pattern examples in a test or stress file
+# add a single line comment containing the marker below. Only use where the
+# content is VERIFIED synthetic (e.g. pattern coverage tests, stress data).
+# Marker: PII_TEST_DATA_ALLOW
+#
+# Optionally, maintain a project-level allowlist file named `.pii-allowlist`
+# (one glob per line) to skip scanning entire paths (still subject to forbidden
+# file type checks). Lines starting with # are ignored.
+#############################################
+ALLOW_MARKER="PII_TEST_DATA_ALLOW"
+ALLOWLIST_FILE=".pii-allowlist"
+
+ALLOWLIST_GLOBS=""
+if [ -f "$ALLOWLIST_FILE" ]; then
+    # shellcheck disable=SC2013
+    while IFS= read -r line; do
+        case "$line" in
+            ''|'#'*) continue;;
+            *) line="$(echo "$line" | tr -d '\r')"; ALLOWLIST_GLOBS="$ALLOWLIST_GLOBS $line";;
+        esac
+    done < "$ALLOWLIST_FILE"
+fi
+
+# Always allow ephemeral synthetic test artifact directories
+ALLOWLIST_GLOBS="$ALLOWLIST_GLOBS tmp-test/* tmp-test-consistency/* tmp-test/** tmp-test-consistency/**"
+
+is_redacted_file() {
+    _file="$1"
+    # If file contains common redaction tokens, treat as synthetic documentation
+    if grep -qE '\\[(EMAIL|GUID|SUBSCRIPTION|PHONE|CASE|IP)-REDACTED\\]' "$_file" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+is_allowlisted() {
+    _file="$1"
+    # Normalize path (remove leading ./)
+    case "$_file" in
+        ./*) _file="${_file#./}" ;;
+    esac
+    # Marker present? allow.
+    if grep -q "$ALLOW_MARKER" "$_file" 2>/dev/null; then
+         return 0
+    fi
+    # Glob allowlist paths
+    for g in $ALLOWLIST_GLOBS; do
+        # Normalize allowlist glob
+        gl="${g#./}"
+        case "$_file" in
+            $gl) return 0;;
+        esac
+    done
+    return 1
+}
+
+# Check each pattern, excluding source code files (.ts, .js) AND skipping allowlisted files
+PII_FOUND=false
+for pattern in "${PII_PATTERNS[@]}"; do
+    MATCH_FILES=$(echo "$STAGED_FILES" | xargs grep -l -i -E "$pattern" 2>/dev/null || true)
+    CLEANED=""
+    for f in $MATCH_FILES; do
+        case "$f" in
+            *.ts|*.js|.githooks/*|package.json|package-lock.json)
+                # Skip source & infra files (pattern definitions live here)
+                continue;;
+        esac
+        # Skip allowlisted (marker/glob)
+        if is_allowlisted "$f"; then
+            continue
+        fi
+        # Skip markdown files that are already redacted (contain placeholder tokens)
+        if echo "$f" | grep -qE '\\.md$' && is_redacted_file "$f"; then
+            continue
+        fi
+        # Special case: password pattern in markdown with placeholder only
+        if [ "$pattern" = "password.*[:=]" ] && echo "$f" | grep -qE '\\.md$'; then
+            if grep -q "YOUR_SECURE_PASSWORD" "$f"; then
+                continue
+            fi
+        fi
+        CLEANED="$CLEANED $f"
+    done
+    if [ -n "$CLEANED" ]; then
+        echo "❌ POTENTIAL PII DETECTED: Pattern '$pattern' found in staged files:"
+        echo "$CLEANED" | tr ' ' '\n' | sed '/^$/d'
+        PII_FOUND=true
+    fi
+done
+
+# Check for files that should never be committed
+FORBIDDEN_FILES=(
+    "*.key"
+    "*.pii"
+    "*.sensitive"
+    "*.secret"
+    "*.mapping"
+    "*.obfuscation"
+    ".env*"
+    "keys/*"
+    "mappings/*"
+    "pii-data/*"
+)
+
+##
+# Previous implementation attempted to treat glob patterns (e.g. *.key, .env*) as regex directly with grep -E,
+# causing false positives (e.g. '*.key' interpreted as an invalid/empty regex that could match). Replace with
+# explicit per-file glob matching using a case statement which correctly honors shell glob semantics.
+##
+for file in $STAGED_FILES; do
+    case "$file" in
+        *.key|*.pii|*.sensitive|*.secret|*.mapping|*.obfuscation|.env*|keys/*|mappings/*|pii-data/*)
+            echo "❌ FORBIDDEN FILE TYPE: '$file' should never be committed"
+            PII_FOUND=true
+            ;;
+    esac
+done
+
+# Check for large files that might contain data dumps
+echo "$STAGED_FILES" | while read -r file; do
+    if [ -f "$file" ] && [ $(wc -c < "$file") -gt 1048576 ]; then  # 1MB
+        echo "⚠️  WARNING: Large file detected: $file ($(wc -c < "$file") bytes)"
+        echo "   Please verify this doesn't contain PII data"
+    fi
+done
+
+if [ "$PII_FOUND" = true ]; then
+    echo ""
+    echo "🚨 COMMIT BLOCKED: Potential PII or sensitive data detected!"
+    echo ""
+    echo "Actions to take:"
+    echo "1. Remove or obfuscate any PII data"
+    echo "2. Use synthetic test data instead"
+    echo "3. Move sensitive files to .gitignore"
+    echo "4. Use secure configuration management"
+    echo ""
+    echo "To bypass this check (ONLY if you're certain it's safe):"
+    echo "git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo "✅ Pre-commit security check passed"
+exit 0
