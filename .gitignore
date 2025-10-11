@@ -63,6 +63,11 @@ temp/
 exports/*.json
 !exports/example-dashboard.json
 
+# Dashboard output directory (exported JSON files)
+output/dashboards/*.json
+!output/dashboards/.gitkeep
+output/*.yaml
+
 # Dashboard snapshots (contain PII - creator names, dashboard names, etc.)
 docs/snapshots/*.yaml
 docs/snapshots/*.json

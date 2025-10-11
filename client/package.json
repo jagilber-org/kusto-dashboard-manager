@@ -3,10 +3,18 @@
   "version": "1.0.0",
   "description": "Test clients for kusto-dashboard-manager MCP server",
   "type": "module",
-  "main": "test-js-kusto.js",
+  "main": "dashboard-client.js",
+  "bin": {
+    "dashboard-client": "./dashboard-client.js"
+  },
   "scripts": {
+    "start": "node dashboard-client.js",
+    "start:parse": "node dashboard-client.js --parse",
+    "start:export": "node dashboard-client.js --parse --export",
+    "start:json": "node dashboard-client.js --parse --json",
     "test:kusto": "node test-js-kusto.js",
     "test:playwright": "node test-js-playwright.js",
+    "test:orchestrator": "node test-orchestrator.js",
     "test:kusto:debug": "node test-js-kusto.js --debug",
     "test:playwright:debug": "node test-js-playwright.js --debug"
   },

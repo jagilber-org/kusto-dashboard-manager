@@ -405,7 +405,7 @@ kusto-dashboard-manager/
    ```bash
    # JavaScript tests
    cd client && npm install && npm run test:kusto
-   
+
    # Python tests
    python client/test_mcp_client.py
    ```
@@ -748,7 +748,7 @@ Contributions are welcome! Please follow these guidelines:
    ```bash
    # JavaScript tests
    cd client && npm run test:kusto
-   
+
    # Python tests
    python client/test_mcp_client.py
    ```
@@ -823,7 +823,48 @@ For questions, issues, or feature requests:
 
 ## Changelog
 
-### Version 1.0.0 (2024)
+### Version 2.0.0 (October 2025) - JavaScript Client & Bulk Export
+
+**Major Features**:
+
+- ✅ **JavaScript MCP client for bulk export** (`client/export-all-dashboards.mjs`)
+- ✅ **Automated dashboard export from list page** (27 dashboards exported successfully)
+- ✅ **PowerShell MCP integration** for file operations and JSON formatting
+- ✅ **Dash-separated filenames** (e.g., `batch-account.json`)
+- ✅ **Pretty-printed JSON output** (ConvertTo-Json -Depth 100)
+- ✅ **Temp file handling** (copy from playwright-mcp-output before cleanup)
+- ✅ **Dashboard ID verification** (prevents file mismatches)
+- ✅ **Creator filtering** (includes both named creators and '--' for old dashboards)
+- ✅ **Comprehensive Playwright MCP documentation** (`docs/PLAYWRIGHT_MCP_LEARNINGS.md`)
+
+**Implementation Details**:
+
+- Export workflow: List page → Click ellipsis → Download → Copy from temp → Pretty-print
+- Average time: ~10.6 seconds per dashboard
+- Success rate: 100% (27/27 dashboards)
+- Total runtime: ~4.8 minutes for complete export
+
+**Key Discoveries**:
+
+- 🔍 Playwright MCP downloads to temp location (auto-deleted on browser close)
+- 🔍 Must copy files BEFORE closing browser/MCP connections
+- 🔍 Accessibility tree refs are dynamic (never hardcode)
+- 🔍 Old dashboards show '--' as creator (not assigned)
+
+**Bug Fixes**:
+
+- 🐛 Fixed file disappearance (copy from temp before cleanup)
+- 🐛 Fixed filename spaces (replace with dashes)
+- 🐛 Fixed JSON formatting (pretty-print with proper indentation)
+- 🐛 Fixed missing old dashboards (include '--' creator filter)
+
+**Documentation**:
+
+- 📚 `docs/DASHBOARD_EXPORT_COMPLETE.md` - Complete export project summary
+- 📚 `docs/PLAYWRIGHT_MCP_LEARNINGS.md` - Best practices and patterns
+- 📚 Updated `.gitignore` to exclude `output/dashboards/*.json`
+
+### Version 1.0.0 (October 2024) - PowerShell & MCP Server
 
 **Major Features**:
 
@@ -852,11 +893,12 @@ For questions, issues, or feature requests:
 
 **Future Enhancements**:
 
-- Batch export to individual JSON files
+- ~~Batch export to individual JSON files~~ ✅ **Completed in v2.0.0**
 - Dashboard diff/merge capabilities
 - Export/import dashboard permissions
 - Dashboard versioning and history
 - CI/CD integration examples
+- Manifest file generation with dashboard metadata
 
 ---
 
