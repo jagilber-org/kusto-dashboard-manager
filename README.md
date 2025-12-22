@@ -283,84 +283,40 @@ Export all my Azure Data Explorer dashboards by John Doe
 
 ## Testing
 
-### Test Suite Overview
+### Quick Test Commands
 
-The project includes comprehensive test clients achieving **100% pass rates**:
+**JavaScript Tests** (requires Node.js 22.20.0+):
+`ash
+cd client && npm install
+
+# Test Kusto Dashboard Manager
+npm run test:kusto
+
+# Test Playwright MCP integration
+npm run test:playwright
+
+# Debug mode
+npm run test:kusto:debug
+`
+
+**Python Tests**:
+`ash
+python client/test_mcp_client.py
+`
+
+### Test Results Summary
 
 | Client | Type | Pass Rate | Tests | Runtime |
 |--------|------|-----------|-------|---------|
-| `test-js-kusto.js` | JavaScript | ✅ 100% | 3/3 | ~750ms |
-| `test-js-playwright.js` | JavaScript | ✅ 100% | 7/7 | ~2.5s |
-| `test_mcp_client.py` | Python | ✅ 100% | 3/3 | ~1.4s |
+| 	est-js-kusto.js | JavaScript | ✅ 100% | 3/3 | ~750ms |
+| 	est-js-playwright.js | JavaScript | ✅ 100% | 7/7 | ~2.5s |
+| 	est_mcp_client.py | Python | ✅ 100% | 3/3 | ~1.4s |
 
-### Running Tests
-
-**JavaScript Tests (requires Node.js 22.20.0+)**:
-
-```bash
-cd client
-
-# Install dependencies
-npm install
-
-# Test Kusto Dashboard Manager MCP server
-npm run test:kusto
-
-# Test Playwright MCP server integration
-npm run test:playwright
-
-# Debug mode (with detailed output)
-npm run test:kusto:debug
-npm run test:playwright:debug
-```
-
-**Python Tests**:
-
-```bash
-# Test Kusto Dashboard Manager MCP server
-python client/test_mcp_client.py
-```
-
-### Test Client Details
-
-#### test-js-kusto.js
-
-JavaScript MCP SDK client for testing `kusto-dashboard-manager`:
-
-- **Tests**: Connection, Tool Discovery (5 tools), Parse Dashboards
-- **Protocol**: Content-Length framing via `StdioClientTransport`
-- **Features**: Comprehensive error handling, pretty output formatting
-
-#### test-js-playwright.js
-
-JavaScript client validating MCP SDK with official Playwright MCP:
-
-- **Tests**: Connection, navigation, snapshot, screenshot, click, etc.
-- **Purpose**: Validates MCP SDK functionality with production MCP server
-
-#### test_mcp_client.py
-
-Standalone Python client with direct JSON-RPC implementation:
-
-- **Tests**: Connection, Tool Discovery, Parse Dashboards
-- **Protocol**: Newline-delimited JSON (simpler than Content-Length)
-- **Features**: Async subprocess management, ~200 lines of code
-
-### Documentation
-
-For detailed testing information, see:
-
-- **[CLIENT_TESTING.md](client/CLIENT_TESTING.md)**: Comprehensive testing guide
-  - Client inventory and status
-  - MCP protocol details
-  - **Playwright snapshot YAML format specification**
-  - Test recommendations and troubleshooting
-
-- **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)**: Complete test results
-  - Executive summary
-  - All issues found and fixed
-  - Performance metrics
-  - Recommendations for next steps
+**📖 See: [docs/TESTING.md](docs/TESTING.md)** for comprehensive testing guide including:
+- Test client details and features
+- MCP protocol details
+- Playwright snapshot YAML format specification
+- Test recommendations and troubleshooting
 
 ## Development
 
@@ -439,311 +395,55 @@ kusto-dashboard-manager/
 
 ## Architecture
 
-### MCP Integration Overview
+### Quick Overview
 
-```text
-┌──────────────────────────────────────────────────────────────────┐
-│                        VS Code / GitHub Copilot                   │
-│                      (MCP Client / Orchestrator)                  │
-└──────────────────────────────────────────────────────────────────┘
-                              │
-            ┌─────────────────┴──────────────────┐
-            │                                    │
-            ▼                                    ▼
-┌────────────────────────┐          ┌────────────────────────┐
-│   Playwright MCP       │          │ Kusto Dashboard Manager│
-│   Server (Node.js)     │          │   MCP Server (Python)  │
-│                        │          │                        │
-│  Tools:                │          │  Tools:                │
-│  - navigate            │          │  - parse_dashboards    │
-│  - snapshot            │          │  - export_dashboard    │
-│  - click               │          │  - import_dashboard    │
-│  - screenshot          │          │  - validate_dashboard  │
-│  - wait_for            │          │  - export_all          │
-└────────────────────────┘          └────────────────────────┘
-            │                                    │
-            ▼                                    ▼
-      ┌──────────┐                    ┌──────────────────┐
-      │ Chromium │                    │ Dashboard Parser │
-      │ Browser  │                    │ (Regex + YAML)   │
-      └──────────┘                    └──────────────────┘
-```
+`	ext
+VS Code / GitHub Copilot
+         │
+    ┌────┴─────┐
+    │          │
+Playwright   Kusto Dashboard
+MCP Server   Manager MCP
+(Node.js)    (Python)
+`
 
-### Key Design Principles
+**Key Principles**:
+- Isolated MCP servers (separate processes)
+- Client orchestration (VS Code/Copilot coordinates all calls)
+- Browser automation via Playwright MCP only
 
-1. **Isolated MCP Servers**
-   - Each MCP server runs in a separate process
-   - Servers communicate via stdio (JSON-RPC protocol)
-   - **No direct server-to-server communication**
-   - VS Code/Copilot orchestrates all cross-server calls
-
-2. **Client Orchestration**
-   - User makes request via Copilot Chat
-   - Copilot determines which tools to call and in what order
-   - Copilot passes data between servers as needed
-   - Example: Playwright snapshot → Copilot → Kusto parser
-
-3. **Browser Automation**
-   - Playwright MCP handles all browser interactions
-   - Kusto Dashboard Manager never touches browser directly
-   - Accessibility snapshots provide structured YAML representation
-
-### Component Details
-
-#### 1. MCP Server (`src/mcp_server.py`)
-
-- **Protocol**: JSON-RPC 2.0 over stdio
-- **Transport**: Newline-delimited JSON or Content-Length framing
-- **Tools**: 5 tools exposed to Copilot
-- **Logging**: File-based only (stdout reserved for JSON-RPC)
-- **Error Handling**: Proper MCP error responses
-
-#### 2. Dashboard Export (`src/dashboard_export.py`)
-
-- **Input**: Playwright accessibility snapshot (YAML)
-- **Parsing**: Regex-based extraction of dashboard metadata
-- **Output**: List of dashboard objects (URL, name, creator, date)
-- **Filtering**: Creator-based filtering support
-
-#### 3. Dashboard Import (`src/dashboard_import.py`)
-
-- **Input**: Dashboard JSON file
-- **Validation**: Schema validation before import
-- **Method**: JavaScript injection via Playwright
-- **Verification**: Optional post-import check
-
-#### 4. Tracing (`src/tracer.py`)
-
-- **Critical Fix**: No stdout logging (prevents JSON-RPC corruption)
-- **File-based**: All logs written to `logs/` directory
-- **Format**: Timestamped entries with log level
-- **Usage**: Debug MCP server issues without disrupting protocol
-
-### Data Flow: Bulk Export
-
-```text
-User Request (Copilot Chat)
-    │
-    │ "Export all dashboards by Jason Gilbertson"
-    │
-    ▼
-Copilot Determines Workflow
-    │
-    ├─► Step 1: @playwright navigate (https://dataexplorer.azure.com/dashboards)
-    │       └─► Playwright MCP: Opens browser, navigates
-    │
-    ├─► Step 2: @playwright wait (8 seconds)
-    │       └─► Playwright MCP: Waits for page load
-    │
-    ├─► Step 3: @playwright snapshot
-    │       └─► Playwright MCP: Captures accessibility tree as YAML
-    │       └─► Returns: snapshot_yaml (raw YAML text)
-    │
-    └─► Step 4: @kusto-dashboard-manager export_all_dashboards
-            └─► Parameters:
-                - snapshot_yaml: (from Step 3)
-                - creator_filter: "Jason Gilbertson"
-            └─► Processing:
-                - Parse YAML with regex
-                - Extract: URL, name, creator, date
-                - Filter by creator
-                - Return list of matching dashboards
-            └─► Returns: [{url, name, creator, last_modified}, ...]
-```
-
-### Non-Standard YAML Format
-
-The Playwright accessibility snapshot uses a **non-standard YAML format** that cannot be parsed by standard YAML libraries. See [CLIENT_TESTING.md](client/CLIENT_TESTING.md) for details.
-
-**Key characteristics**:
-
-- Indentation-based structure
-- `/url:`, `/name:`, `rowheader`, `text` tags
-- Date format: `MM/DD/YYYY, HH:MM AM/PM`
-- No proper YAML key-value pairs
-
-**Example**:
-
-```yaml
-- row "Sales Analytics Dashboard" (creator: John Doe):
-  - cell "Sales Analytics Dashboard":
-    - link "Sales Analytics Dashboard":
-      /url: /dashboards/12345-67890-abcdef
-      /name: Sales Analytics Dashboard
-    - text "John Doe":
-      rowheader "John Doe"
-    - text "01/15/2024, 3:45 PM"
-```
-
-### Protocol Details
-
-**JSON-RPC 2.0 Message Format**:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "export_all_dashboards",
-    "arguments": {
-      "snapshot_yaml": "...",
-      "creator_filter": "Jason Gilbertson"
-    }
-  }
-}
-```
-
-**Response Format**:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "[{\"url\": \"...\", \"name\": \"...\"}]"
-      }
-    ]
-  }
-}
-```
+**📖 See: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for complete architecture including:
+- Detailed component diagrams and data flow
+- MCP integration patterns
+- Protocol specifications (JSON-RPC 2.0)
+- Non-standard YAML format details
+- Design principles and limitations
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues Quick Reference
 
-#### 1. MCP tools not appearing in Copilot
+| Issue | Quick Fix |
+|-------|-----------|
+| MCP tools not appearing | Reload VS Code window |
+| Server fails to start | Check logs/mcp_server.log |
+| Empty parse results | Wait 8+ seconds for page load, check Azure login |
+| JSON-RPC errors | Check for stdout logging in code |
+| Browser automation fails | Verify Playwright MCP installation |
 
-**Problem**: `@kusto-dashboard-manager` or `@playwright` not available in Copilot Chat.
+### Debug Logging
 
-**Solution**:
+All logs automatically written to logs/ directory:
+- logs/mcp_server.log - MCP server operations
+- logs/dashboard_export.log - Dashboard parsing
+- logs/dashboard_import.log - Dashboard import
+- logs/dashboard_validate.log - Validation
 
-1. Verify `.vscode/settings.json` has correct MCP configuration
-2. Reload VS Code window: `Ctrl+Shift+P` → "Developer: Reload Window"
-3. Check Copilot output panel for MCP server startup errors
-4. Verify Python/Node.js are in PATH
-
-#### 2. MCP server fails to start
-
-**Problem**: Error in Copilot output: "Failed to start MCP server".
-
-**Solution**:
-
-```bash
-# Test server manually
-python -u src/mcp_server.py
-
-# Should see initialization message in logs/mcp_server.log
-# Check for errors in logs/
-
-# Common issues:
-# - Missing dependencies: pip install -r requirements.txt
-# - Wrong Python version: Use Python 3.12+
-# - Syntax errors: Check recent code changes
-```
-
-#### 3. Dashboard parsing returns empty results
-
-**Problem**: `parse_dashboards_from_snapshot` returns `[]`.
-
-**Solution**:
-
-- Ensure you waited long enough for page load (8+ seconds)
-- Verify you're logged into Azure Data Explorer
-- Check snapshot YAML contains dashboard rows
-- Try without creator filter first to see all dashboards
-- Review logs in `logs/dashboard_export.log`
-
-#### 4. "Invalid JSON-RPC response" error
-
-**Problem**: MCP client reports protocol errors.
-
-**Solution**:
-
-- **Most common cause**: Logging to stdout in MCP server
-- Check `src/tracer.py` has NO stdout handlers
-- Verify all `print()` statements removed from MCP server
-- Review recent code changes that might write to stdout
-
-#### 5. Browser automation fails
-
-**Problem**: Playwright MCP reports navigation errors.
-
-**Solution**:
-
-```bash
-# Verify Playwright MCP is installed
-npx @playwright/mcp@latest --version
-
-# Test Playwright MCP manually
-npx @playwright/mcp@latest
-
-# Should start server, then test with:
-# {"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
-```
-
-#### 6. Creator filter not working
-
-**Problem**: Dashboards by other creators included in results.
-
-**Solution**:
-
-- Creator matching is **case-sensitive**
-- Use exact name as it appears in dashboard list
-- Example: "Jason Gilbertson" not "jason gilbertson"
-- Check logs for actual creator names found
-
-### Debug Mode
-
-**Enable file-based logging**:
-
-All logs are automatically written to `logs/` directory:
-
-- `logs/mcp_server.log` - MCP server operations
-- `logs/dashboard_export.log` - Dashboard parsing
-- `logs/dashboard_import.log` - Dashboard import
-- `logs/dashboard_validate.log` - Validation
-
-**Increase log verbosity** (edit `src/tracer.py`):
-
-```python
-# Change INFO to DEBUG
-file_handler.setLevel(logging.DEBUG)
-```
-
-**Test clients for debugging**:
-
-```bash
-# JavaScript client (most verbose)
-cd client
-npm run test:kusto:debug
-
-# Python client
-python client/test_mcp_client.py
-```
-
-### Known Limitations
-
-1. **No direct server-to-server communication**: By MCP protocol design, servers cannot call each other
-2. **Non-standard YAML parsing**: Playwright snapshots use custom format, requires regex parsing
-3. **Authentication**: Must be logged into Azure Data Explorer in browser before exporting
-4. **Single-threaded**: One MCP request at a time (async within requests)
-
-### Getting Help
-
-If you're still stuck:
-
-1. Check [CLIENT_TESTING.md](client/CLIENT_TESTING.md) for detailed testing guide
-2. Review [MCP_ARCHITECTURE_ISSUE.md](docs/MCP_ARCHITECTURE_ISSUE.md) for architecture details
-3. Check [TESTING_SUMMARY.md](TESTING_SUMMARY.md) for known issues and fixes
-4. Open a GitHub issue with:
-   - Error message
-   - Relevant log files from `logs/`
-   - Steps to reproduce
-   - VS Code and Copilot versions
+**📖 See: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** for detailed troubleshooting including:
+- Complete issue descriptions and solutions
+- Debug mode configuration
+- Known limitations
+- Getting help resources
 
 ## Contributing
 
