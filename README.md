@@ -1,5 +1,7 @@
 # Kusto Dashboard Manager
 
+> **Portfolio Project** | [View Full Portfolio](https://github.com/jagilber-org) | [Specifications](docs/specs/)
+
 An MCP (Model Context Protocol) server for exporting and importing Azure Data Explorer (Kusto) dashboards via VS Code and GitHub Copilot integration with Playwright browser automation.
 
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
@@ -8,6 +10,16 @@ An MCP (Model Context Protocol) server for exporting and importing Azure Data Ex
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen)](client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+## 📚 Documentation
+
+### Specifications
+
+- **[Product Specification](docs/specs/spec.md)** - User scenarios, functional requirements, success criteria, integration points
+- **[Technical Plan](docs/specs/plan.md)** - Architecture, implementation phases, performance benchmarks
+
+### Project Documentation
+
+- [Full Documentation Index](docs/) - Comprehensive guides and references
 ## Features
 
 - **VS Code Integration**: Works seamlessly with GitHub Copilot via MCP protocol
@@ -88,6 +100,16 @@ An MCP (Model Context Protocol) server for exporting and importing Azure Data Ex
    - Open GitHub Copilot Chat
    - Type `@workspace` and you should see tools from both servers
 
+## 📚 Documentation
+
+### Specifications
+
+- **[Product Specification](docs/specs/spec.md)** - User scenarios, functional requirements, success criteria, integration points
+- **[Technical Plan](docs/specs/plan.md)** - Architecture, implementation phases, performance benchmarks
+
+### Project Documentation
+
+- [Full Documentation Index](docs/) - Comprehensive guides and references
 ## Quick Start
 
 ### Using GitHub Copilot Chat (Recommended)
