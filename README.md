@@ -10,6 +10,25 @@ An MCP (Model Context Protocol) server for exporting and importing Azure Data Ex
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen)](client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+## Portfolio Context
+
+This project is part of the [jagilber-org portfolio](https://github.com/jagilber-org), demonstrating real-world Azure integration and dashboard automation patterns.
+
+**Cross-Project Integration**:
+- Uses **powershell-mcp-server** for KQL generation and Azure operations
+- Integrates with **chrome-screenshot-sanitizer** for Azure Portal documentation
+- Leverages **obfuscate-mcp-server** for sensitive Kusto query sanitization
+- Reference implementation for Azure Kusto Data Explorer automation
+
+**Portfolio Highlights**:
+- Production-ready Azure Kusto integration with 25+ dashboard templates
+- Real-world MCP tools for Azure services (Kusto, ARM, subscriptions)
+- Grafana dashboard generation and management automation
+- Comprehensive testing patterns for Azure integrations
+- Enterprise query optimization and validation workflows
+
+[View Full Portfolio](https://github.com/jagilber-org) | [Integration Examples](https://github.com/jagilber-org#cross-project-integration)
+
 ## 📚 Documentation
 
 ### Specifications
