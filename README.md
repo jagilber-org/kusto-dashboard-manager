@@ -10,6 +10,22 @@ An MCP (Model Context Protocol) server for exporting and importing Azure Data Ex
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-brightgreen)](client/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+## 🔐 Security Notice
+
+This repository follows [GitHub Spec-Kit](https://github.com/ambie-inc) security standards:
+
+- **Pre-commit hooks**: Prevents accidental commit of credentials and Azure subscription details
+- **Environment variables**: Use `.env.example` as template, never commit actual `.env`
+- **Config files**: `*.example.json` files are templates; actual config files are gitignored
+- **Placeholder data**: All examples use generic values (contoso.com, example cluster URIs, sample dashboard IDs)
+- **Azure credentials**: Never commit Azure authentication tokens or connection strings
+- **Dashboard exports**: Sanitize exported JSONs before committing (use obfuscate-mcp-server)
+- **Playwright sessions**: Browser automation session data and screenshots are gitignored
+
+**For contributors**: Review security guidelines in the Contributing section before making changes.
+
+---
+
 ## Portfolio Context
 
 This project is part of the [jagilber-org portfolio](https://github.com/jagilber-org), demonstrating real-world Azure integration and dashboard automation patterns.
@@ -62,6 +78,74 @@ This project is part of the [jagilber-org portfolio](https://github.com/jagilber
 - [License](#license)
 
 ## Installation
+
+### First-Time Setup
+
+**Prerequisites:**
+- Python 3.12 or higher
+- Node.js 22.20.0 or higher for test clients
+- VS Code with GitHub Copilot extension
+- Playwright MCP server (`@playwright/mcp@latest`)
+- Azure Data Explorer account with dashboard access
+
+**Initial Setup:**
+
+```bash
+# Clone the repository
+git clone https://github.com/jagilber-org/kusto-dashboard-manager.git
+cd kusto-dashboard-manager
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install Playwright MCP server
+npx @playwright/mcp@latest
+
+# Install test client dependencies (optional)
+cd client && npm install
+cd ..
+```
+
+**Configure VS Code:**
+
+1. Add MCP server configuration to `.vscode/settings.json`:
+
+```json
+{
+  "github.copilot.chat.mcp.enabled": true,
+  "github.copilot.chat.mcp.servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
+    },
+    "kusto-dashboard-manager": {
+      "command": "python",
+      "args": ["-u", "src/mcp_server.py"]
+    }
+  }
+}
+```
+
+2. Reload VS Code window:
+   - Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+   - Type "Developer: Reload Window"
+   - Press Enter
+
+3. Verify MCP servers are running:
+   - Open GitHub Copilot Chat
+   - Type `@workspace` and you should see tools from both servers
+
+**Verify Installation:**
+
+```bash
+# Run test suite to verify setup
+cd client
+npm run test:kusto     # Should show 3/3 tests passing
+npm run test:playwright # Should show 7/7 tests passing
+
+# Check Python MCP server
+python client/test_mcp_client.py  # Should show 3/3 tests passing
+```
 
 ### Prerequisites
 
@@ -305,7 +389,7 @@ Export all my Azure Data Explorer dashboards by John Doe
 ### Quick Test Commands
 
 **JavaScript Tests** (requires Node.js 22.20.0+):
-`ash
+```bash
 cd client && npm install
 
 # Test Kusto Dashboard Manager
@@ -316,20 +400,20 @@ npm run test:playwright
 
 # Debug mode
 npm run test:kusto:debug
-`
+```
 
 **Python Tests**:
-`ash
+```bash
 python client/test_mcp_client.py
-`
+```
 
 ### Test Results Summary
 
 | Client | Type | Pass Rate | Tests | Runtime |
 |--------|------|-----------|-------|---------|
-| 	est-js-kusto.js | JavaScript | ✅ 100% | 3/3 | ~750ms |
-| 	est-js-playwright.js | JavaScript | ✅ 100% | 7/7 | ~2.5s |
-| 	est_mcp_client.py | Python | ✅ 100% | 3/3 | ~1.4s |
+| test-js-kusto.js | JavaScript | ✅ 100% | 3/3 | ~750ms |
+| test-js-playwright.js | JavaScript | ✅ 100% | 7/7 | ~2.5s |
+| test_mcp_client.py | Python | ✅ 100% | 3/3 | ~1.4s |
 
 **📖 See: [docs/TESTING.md](docs/TESTING.md)** for comprehensive testing guide including:
 - Test client details and features
@@ -416,7 +500,7 @@ kusto-dashboard-manager/
 
 ### Quick Overview
 
-`	ext
+```text
 VS Code / GitHub Copilot
          │
     ┌────┴─────┐
@@ -424,7 +508,7 @@ VS Code / GitHub Copilot
 Playwright   Kusto Dashboard
 MCP Server   Manager MCP
 (Node.js)    (Python)
-`
+```
 
 **Key Principles**:
 - Isolated MCP servers (separate processes)
@@ -464,9 +548,86 @@ All logs automatically written to logs/ directory:
 - Known limitations
 - Getting help resources
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please follow these guidelines:
+### Code Standards
+
+This project follows strict Python and MCP protocol standards:
+
+- **Python PEP 8**: Follow PEP 8 style guidelines for all Python code
+- **Type hints**: Use type hints where possible for better code clarity
+- **Docstrings**: Write docstrings for all public functions (Google style)
+- **Testing**: All features require test coverage before merge (maintain 100%)
+- **MCP Compliance**: Follow Model Context Protocol specifications (JSON-RPC 2.0)
+- **No stdout logging**: **CRITICAL** - Never use `print()` or log to stdout in MCP server (corrupts JSON-RPC)
+- **Code Review**: All changes undergo peer review
+- **Documentation**: Update relevant docs with code changes
+
+**Testing Requirements:**
+- Run `npm run test:kusto` before committing (JavaScript tests)
+- Run `python client/test_mcp_client.py` before committing (Python tests)
+- Maintain 100% pass rate (no skipped tests)
+- Add tests for new MCP tools and features
+- Test both success and failure scenarios
+
+**Build Process:**
+```bash
+pip install -r requirements.txt  # Install Python dependencies
+cd client && npm install         # Install test client dependencies
+npm run test:kusto              # Verify JavaScript tests pass
+python client/test_mcp_client.py # Verify Python tests pass
+```
+
+### Repository Ownership Policy
+
+This repository follows strict contribution guidelines per [GitHub Spec-Kit](https://github.com/ambie-inc) standards:
+
+- **No automatic PRs**: Contributors must have explicit permission before creating pull requests
+- **Manual review required**: All contributions undergo code review and security checks
+- **Testing mandatory**: All changes must pass test suite and add appropriate test coverage
+- **Documentation required**: Update CLIENT_TESTING.md, TESTING.md, and other relevant documentation with changes
+
+**Before contributing:**
+1. Open an issue to discuss proposed changes
+2. Wait for maintainer approval
+3. Follow code standards and testing requirements
+4. Ensure all CI checks pass
+
+### Documentation Standards
+
+**IMPORTANT**: Follow these documentation practices:
+
+- ✅ **Use placeholder values** in all examples:
+  - Email addresses: `user@example.com`, `admin@contoso.com`
+  - Names: John Doe, Jane Smith, Example Corp
+  - Cluster URIs: `https://example.kusto.windows.net`, `https://contoso.eastus.kusto.windows.net`
+  - Dashboard IDs: `example-dashboard-123`, `sample-dashboard-id`
+  - Dashboard URLs: `https://dataexplorer.azure.com/dashboards/example-id`
+  - Creator names: John Doe, Jane Smith (generic names)
+  - Directory paths: `C:/path/to/kusto-dashboard-manager` (generic structure)
+
+- ❌ **Never include**:
+  - Real credentials, API keys, or secrets
+  - Actual Azure subscription IDs or tenant IDs
+  - Production Kusto cluster URIs or database names
+  - Real dashboard IDs or dashboard content
+  - Company-specific data or internal identifiers
+  - Personal information or actual creator names from production
+
+- ✅ **Do document**:
+  - Parameter types and JSON schema structures
+  - Usage examples with placeholder values
+  - Error handling patterns and error codes
+  - Configuration options and environment variables
+  - Tool descriptions and MCP protocol patterns
+  - Playwright automation patterns (with generic URLs)
+
+**Security in Documentation:**
+- Review [SECURITY.md](SECURITY.md) before documenting features
+- Never document Azure credentials or authentication tokens
+- Use generic examples for dashboard export workflows
+- Redact any logs or traces containing real data
+- Sanitize dashboard JSONs with obfuscate-mcp-server before committing examples
 
 ### Development Workflow
 
