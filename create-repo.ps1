@@ -13,7 +13,7 @@ Write-Host "`nAttempting to create repository using GitHub CLI..." -ForegroundCo
 try {
     # Check if gh is authenticated
     $authStatus = gh auth status 2>&1
-    
+
     if ($LASTEXITCODE -ne 0) {
         Write-Host "GitHub CLI not authenticated. Please run:" -ForegroundColor Red
         Write-Host "  gh auth login --web" -ForegroundColor Yellow
@@ -21,7 +21,7 @@ try {
         Write-Host "Or use Method 2 below (create via web browser)" -ForegroundColor Yellow
         exit 1
     }
-    
+
     # Create the repository
     Write-Host "Creating repository..." -ForegroundColor Green
     gh repo create "jagilber/$repoName" `
@@ -29,14 +29,14 @@ try {
         --description $repoDescription `
         --source=. `
         --remote=origin
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host "`n✅ Repository created successfully!" -ForegroundColor Green
         Write-Host "`nNow pushing to GitHub..." -ForegroundColor Cyan
-        
+
         # Push to the repository
         git push -u origin master
-        
+
         if ($LASTEXITCODE -eq 0) {
             Write-Host "`n✅ Successfully pushed to GitHub!" -ForegroundColor Green
             Write-Host "`nRepository URL: https://github.com/jagilber/$repoName" -ForegroundColor Cyan
@@ -48,7 +48,7 @@ try {
         Write-Host "`n❌ Failed to create repository" -ForegroundColor Red
         Write-Host "The repository might already exist or there's an authentication issue" -ForegroundColor Yellow
     }
-    
+
 } catch {
     Write-Host "`n❌ Error: $_" -ForegroundColor Red
     Write-Host "`nPlease use Method 2 (web browser) below" -ForegroundColor Yellow

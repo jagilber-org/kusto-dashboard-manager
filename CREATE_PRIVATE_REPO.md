@@ -1,9 +1,9 @@
 # ✅ Create Private GitHub Repository - Quick Guide
 
 ## PII Check Status
-✅ **SAFE TO PUSH** - No PII in committed files  
-✅ All dashboard JSON files excluded by .gitignore  
-✅ All snapshot YAML files excluded by .gitignore  
+✅ **SAFE TO PUSH** - No PII in committed files
+✅ All dashboard JSON files excluded by .gitignore
+✅ All snapshot YAML files excluded by .gitignore
 
 ---
 
@@ -119,7 +119,7 @@ Files to be pushed:
 ### "Repository not found"
 → Create the repository on GitHub first (Step 1 above)
 
-### "Authentication failed"  
+### "Authentication failed"
 → Use a Personal Access Token as password (see Option B above)
 
 ### "Updates were rejected"
@@ -150,5 +150,5 @@ git push -u origin master
 
 ## ✅ Ready to Push!
 
-Your repository is safe to push - no PII will be exposed.  
+Your repository is safe to push - no PII will be exposed.
 Just create the repository on GitHub (Step 1) and push (Step 2).

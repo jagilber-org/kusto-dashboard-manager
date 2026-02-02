@@ -23,11 +23,11 @@ PII_PATTERNS=(
     "AZRVPSF\d+"  # Computer name patterns
     "\.corp\.[a-z]+\.[a-z]+"  # Corporate domain patterns
     "C:\\\\github\\\\[a-zA-Z]+"  # Personal GitHub paths
-    
+
     # === MICROSOFT-SPECIFIC PATTERNS ===
     # Microsoft case numbers (13-16 digits)
     "\b\d{13,16}\b"
-    
+
     # === AZURE-SPECIFIC SECURITY PATTERNS ===
     # Certificate thumbprints (40-character hex strings)
     "\b[a-fA-F0-9]{40}\b"
@@ -121,7 +121,7 @@ elif [ -n "$GIT_USER_NAME" ]; then
     # Also check for first and last name separately
     FIRST_NAME=$(echo "$GIT_USER_NAME" | awk '{print $1}')
     LAST_NAME=$(echo "$GIT_USER_NAME" | awk '{print $NF}')
-    
+
     if [ "$FIRST_NAME" != "$LAST_NAME" ] && [ -n "$FIRST_NAME" ] && [ -n "$LAST_NAME" ]; then
         REAL_NAME_PATTERN="$ESCAPED_NAME|$FIRST_NAME|$LAST_NAME"
     else
