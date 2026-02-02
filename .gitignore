@@ -1,3 +1,72 @@
+# ===================================================================
+# RUNTIME ARTIFACTS - NEVER COMMIT
+# ===================================================================
+# These directories contain runtime-generated data, test artifacts,
+# and temporary files that MUST NEVER be committed to the repository.
+
+# Temporary directories and scratch space (ALL test artifacts)
+tmp/
+tmp/**
+*.tmp
+temp/
+temp/**
+
+# Runtime data and state directories
+data/
+data/**
+!data/.keep
+memory/
+memory/**
+!memory/.keep
+metrics/
+metrics/**
+!metrics/.keep
+
+# Output directories (runtime exports, screenshots, network traces)
+output/
+output/**
+!output/.keep
+!output/dashboards/.gitkeep
+
+# Traces (may contain session data and PII)
+traces/
+traces/**
+!traces/.keep
+
+# Test exports and runtime test data
+test_exports/
+test_exports/**
+!test_exports/.keep
+
+# Log files and runtime logs
+logs/
+logs/**
+!logs/.keep
+!logs/trace/.keep
+*.log
+
+# Test run sentinel / status markers (ALL test markers)
+.test-run-complete.*.marker
+.test-run-complete.*
+.test-run-status.json
+.test-run-complete.latest
+.baseline.sentinel
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+.nyc_output/
+
+# Backup directories
+backups/
+*_backup_*/
+*.bak
+*.backup
+*~
+
+# ===================================================================
+
 # PowerShell
 *.ps1xml
 *.psd1~
@@ -12,7 +81,6 @@ dist/
 # Test results
 TestResults/
 *.trx
-coverage/
 
 # Local configuration
 *.local.json
@@ -40,10 +108,6 @@ playwright-report/
 test-results/
 .playwright-cache/
 
-# Logs
-*.log
-logs/
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -53,17 +117,7 @@ desktop.ini
 *.bak
 *.backup
 *~
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Dashboard exports (unless explicitly committed)
-exports/*.json
-!exports/example-dashboard.json
-
-# Dashboard output directory (exported JSON files)
+Dashboard output directory (exported JSON files)
 output/dashboards/*.json
 !output/dashboards/.gitkeep
 output/*.yaml
@@ -73,20 +127,10 @@ docs/snapshots/*.yaml
 docs/snapshots/*.json
 !docs/snapshots/README.md
 
-# Traces (may contain session data and PII)
-traces/**
-!traces/.gitkeep
-!traces/README.md
-
-# Node modules (if using Playwright via npm)
-node_modules/
-package-lock.json
-
-# Python (if using MCP servers)
-__pycache__/
-*.py[cod]
-venv/
-.venv/
+# Traces (masnapshots (contain PII - creator names, dashboard names, etc.)
+docs/snapshots/*.yaml
+docs/snapshots/*.json
+!docs/snapshot
 .env
 .env.local
 
